@@ -1,0 +1,22 @@
+﻿@* Views/Test/Index.cshtml *@
+@model List<SnapSaves.Models.Project>
+
+<h1>Test Projects</h1>
+
+@if (Model.Any())
+{
+    <ul>
+        @foreach (var project in Model)
+        {
+            <li>
+                <h3>@project.Name</h3>
+                <p>Created: @project.CreatedAt</p>
+                <p>Files: @project.Files.Count</p>
+            </li>
+        }
+    </ul>
+}
+else
+{
+    <p>No projects found. Seeder may not have run.</p>
+}
