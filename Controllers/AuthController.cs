@@ -6,7 +6,8 @@ using SnapSaves.Auth;
 using SnapSaves.Data;
 using SnapSaves.Models;
 using SnapSaves.Models.ViewModels;
-
+using Microsoft.EntityFrameworkCore;
+using MongoDB.Driver;
 namespace SnapSaves.Controllers
 {
     public class AuthController : Controller
@@ -44,27 +45,7 @@ namespace SnapSaves.Controllers
 
             try
             {
-                // Create Identity user in MySQL
-                var user = new AppUser
-                {
-                    UserName = model.Email,
-                    Email = model.Email,
-                    FirstName = model.FirstName,
-                    LastName = model.LastName
-                };
-
-                var result = await _userManager.CreateAsync(user, model.Password);
-
-                if (!result.Succeeded)
-                {
-                    foreach (var error in result.Errors)
-                    {
-                        ModelState.AddModelError(string.Empty, error.Description);
-                    }
-                    return View(model);
-                }
-
-                // Create corresponding user in MongoDB
+                // 1. First create MongoDB user
                 var mongoUser = new User
                 {
                     Username = model.Username,
@@ -73,11 +54,30 @@ namespace SnapSaves.Controllers
                 };
                 await _mongoDb.Users.InsertOneAsync(mongoUser);
 
-                // Link the two users
-                user.MongoUserId = mongoUser.Id;
-                await _userManager.UpdateAsync(user);
+                // 2. Then create Identity user with the MongoUserId
+                var user = new AppUser
+                {
+                    UserName = model.Email,
+                    Email = model.Email,
+                    FirstName = model.FirstName,
+                    LastName = model.LastName,
+                    MongoUserId = mongoUser.Id // Set this BEFORE creating the Identity user
+                };
 
-                // Sign in
+                var result = await _userManager.CreateAsync(user, model.Password);
+
+                if (!result.Succeeded)
+                {
+                    // Clean up MongoDB user if Identity creation fails
+                    await _mongoDb.Users.DeleteOneAsync(u => u.Id == mongoUser.Id);
+
+                    foreach (var error in result.Errors)
+                    {
+                        ModelState.AddModelError(string.Empty, error.Description);
+                    }
+                    return View(model);
+                }
+
                 await _signInManager.SignInAsync(user, isPersistent: false);
                 return RedirectToAction("Index", "Home");
             }
