@@ -32,50 +32,53 @@ namespace SnapSaves.Data
             }
         }
 
-       
+
 
         private async Task SeedProjects()
         {
-            var testUserId = (await _context.Users.Find(u => u.Username == "testuser").FirstOrDefaultAsync())?.Id;
+            var testUser = await _context.Users.Find(u => u.Username == "testuser").FirstOrDefaultAsync();
 
-            if (testUserId == null) return;
+            if (testUser == null) return;
 
             var projects = new List<Project>
+    {
+        new Project
+        {
+            Name = "Test Project 1",
+            UserId = testUser.Id,
+            CreatedAt = DateTime.UtcNow,
+            LastModified = DateTime.UtcNow,
+            Files = new List<ProjectFile>
             {
-                new Project
+                new ProjectFile
                 {
-                    Name = "Sample Project 1",
-                    UserId = testUserId,
-                    CreatedAt = DateTime.UtcNow,
-                    LastModified = DateTime.UtcNow,
-                    Files = new List<ProjectFile>
-                    {
-                        new ProjectFile
-                        {
-                            Path = "main.js",
-                            Content = "console.log('Hello SnapSaves!');",
-                            IsDirectory = false
-                        },
-                        new ProjectFile
-                        {
-                            Path = "src",
-                            IsDirectory = true,
-                            Children = new List<ProjectFile>
-                            {
-                                new ProjectFile
-                                {
-                                    Path = "src/utils.js",
-                                    Content = "export function greet() { return 'Hello'; }",
-                                    IsDirectory = false
-                                }
-                            }
-                        }
-                    }
+                    Path = "index.html",
+                    Content = "<!DOCTYPE html><html><head><title>Test</title></head><body>Hello World</body></html>",
+                    IsDirectory = false
                 }
-            };
+            }
+        },
+        new Project
+        {
+            Name = "Test Project 2",
+            UserId = testUser.Id,
+            CreatedAt = DateTime.UtcNow,
+            LastModified = DateTime.UtcNow,
+            Files = new List<ProjectFile>
+            {
+                new ProjectFile
+                {
+                    Path = "app.js",
+                    Content = "console.log('Test Project 2');",
+                    IsDirectory = false
+                }
+            }
+        }
+    };
 
             await _context.Projects.InsertManyAsync(projects);
         }
+
 
        
     }

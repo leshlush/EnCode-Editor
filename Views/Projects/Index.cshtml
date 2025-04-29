@@ -1,0 +1,26 @@
+﻿@model List<SnapSaves.Models.Project>
+
+<h1>My Projects</h1>
+
+<form asp-controller="Projects" asp-action="Create" method="post" class="mb-3">
+    <button type="submit" class="btn btn-primary">Create New Project</button>
+</form>
+
+@if (Model.Any())
+{
+    <ul>
+        @foreach (var project in Model)
+        {
+            <li>
+                <h3>@project.Name</h3>
+                <p>Created: @project.CreatedAt</p>
+                <p>Last Modified: @project.LastModified</p>
+                <p>Files: @project.Files.Count</p>
+            </li>
+        }
+    </ul>
+}
+else
+{
+    <p>You don't have any projects yet.</p>
+}
