@@ -1,0 +1,25 @@
+﻿@model SnapSaves.Models.Project
+
+<h1>@Model.Name</h1>
+
+<p><strong>Created At:</strong> @Model.CreatedAt</p>
+<p><strong>Last Modified:</strong> @Model.LastModified</p>
+
+<h2>Files</h2>
+@if (Model.Files.Any())
+{
+    <ul>
+        @foreach (var file in Model.Files)
+        {
+            <li>
+                <strong>@file.Path</strong> - @file.Content
+            </li>
+        }
+    </ul>
+}
+else
+{
+    <p>No files in this project.</p>
+}
+
+<a asp-controller="Projects" asp-action="Index" class="btn btn-secondary">Back to Projects</a>

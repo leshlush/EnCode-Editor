@@ -12,7 +12,11 @@
         @foreach (var project in Model)
         {
             <li>
-                <h3>@project.Name</h3>
+                <h3>
+                    <a asp-controller="Projects" asp-action="Details" asp-route-id="@project.Id">
+                        @project.Name
+                    </a>
+                </h3>
                 <p>Created: @project.CreatedAt</p>
                 <p>Last Modified: @project.LastModified</p>
                 <p>Files: @project.Files.Count</p>

@@ -8,6 +8,7 @@ using SnapSaves.Models;
 using SnapSaves.Models.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
+using System.Security.Claims;
 namespace SnapSaves.Controllers
 {
     public class AuthController : Controller
@@ -108,6 +109,13 @@ namespace SnapSaves.Controllers
 
             try
             {
+                var user = await _userManager.FindByEmailAsync(model.Email);
+                if (user == null)
+                {
+                    ModelState.AddModelError(string.Empty, "Invalid login attempt");
+                    return View(model);
+                }
+
                 var result = await _signInManager.PasswordSignInAsync(
                     model.Email,
                     model.Password,
@@ -116,6 +124,15 @@ namespace SnapSaves.Controllers
 
                 if (result.Succeeded)
                 {
+                    // Add MongoUserId claim
+                    var claims = new List<Claim>
+                     {
+                          new Claim("MongoUserId", user.MongoUserId) // Add the MongoUserId claim
+                     };
+
+                    var identity = new ClaimsIdentity(claims, "Custom");
+                    await HttpContext.SignInAsync(new ClaimsPrincipal(identity));
+
                     _logger.LogInformation("User logged in");
                     return LocalRedirect(returnUrl);
                 }

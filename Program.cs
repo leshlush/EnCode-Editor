@@ -36,8 +36,8 @@ builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
     options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
-    options.LoginPath = "/Account/Login";
-    options.AccessDeniedPath = "/Account/AccessDenied";
+    options.LoginPath = "/Auth/Login";
+    options.AccessDeniedPath = "/Auth/AccessDenied";
     options.SlidingExpiration = true;
 });
 
@@ -49,6 +49,8 @@ builder.Services.AddTransient<MongoDbSeeder>();
 
 // Add Controllers
 builder.Services.AddControllersWithViews();
+
+builder.Services.AddScoped<IUserClaimsPrincipalFactory<AppUser>, CustomUserClaimsPrincipalFactory>();
 
 var app = builder.Build();
 
