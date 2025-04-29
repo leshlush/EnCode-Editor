@@ -6,20 +6,86 @@
 <p><strong>Last Modified:</strong> @Model.LastModified</p>
 
 <h2>Files</h2>
-@if (Model.Files.Any())
-{
-    <ul>
-        @foreach (var file in Model.Files)
-        {
-            <li>
-                <strong>@file.Path</strong> - @file.Content
-            </li>
-        }
-    </ul>
-}
-else
-{
-    <p>No files in this project.</p>
-}
+<div id="file-list">
+    <p>Loading files...</p>
+</div>
 
 <a asp-controller="Projects" asp-action="Index" class="btn btn-secondary">Back to Projects</a>
+
+<script>
+    const projectId = "@Model.Id";
+
+    // Function to initialize IndexedDB
+    function initIndexedDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open("SnapSavesDB", 1);
+
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains("projectFiles")) {
+                    db.createObjectStore("projectFiles", { keyPath: "path" });
+                }
+            };
+
+            request.onsuccess = (event) => {
+                resolve(event.target.result);
+            };
+
+            request.onerror = (event) => {
+                reject(event.target.error);
+            };
+        });
+    }
+
+    // Function to store files in IndexedDB
+    async function storeFilesInIndexedDB(files) {
+        const db = await initIndexedDB();
+        const transaction = db.transaction("projectFiles", "readwrite");
+        const store = transaction.objectStore("projectFiles");
+
+        files.forEach(file => {
+            store.put(file);
+        });
+
+        transaction.oncomplete = () => {
+            console.log("Files stored in IndexedDB successfully.");
+        };
+
+        transaction.onerror = (event) => {
+            console.error("Error storing files in IndexedDB:", event.target.error);
+        };
+    }
+
+    // Function to fetch project data
+    async function fetchProjectData() {
+        try {
+            const response = await fetch(`/Projects/Details/${projectId}`, {
+                headers: { "Accept": "application/json" }
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to fetch project data.");
+            }
+
+            const project = await response.json();
+
+            // Display files in the UI
+            const fileList = document.getElementById("file-list");
+            if (project.files && project.files.length > 0) {
+                fileList.innerHTML = "<ul>" + project.files.map(file => `
+                    <li><strong>${file.path}</strong> - ${file.content}</li>
+                `).join("") + "</ul>";
+            } else {
+                fileList.innerHTML = "<p>No files in this project.</p>";
+            }
+
+            // Store files in IndexedDB
+            await storeFilesInIndexedDB(project.files);
+        } catch (error) {
+            console.error("Error fetching project data:", error);
+        }
+    }
+
+    // Fetch project data on page load
+    fetchProjectData();
+</script>

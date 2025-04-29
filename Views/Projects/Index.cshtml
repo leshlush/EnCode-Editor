@@ -1,4 +1,7 @@
 ﻿@model List<SnapSaves.Models.Project>
+@{
+    var templates = ViewData["Templates"] as List<SnapSaves.Models.Project>;
+}
 
 <h1>My Projects</h1>
 
@@ -8,6 +11,7 @@
 
 @if (Model.Any())
 {
+    <h2>Your Projects</h2>
     <ul>
         @foreach (var project in Model)
         {
@@ -27,4 +31,26 @@
 else
 {
     <p>You don't have any projects yet.</p>
+}
+
+@if (templates != null && templates.Any())
+{
+    <h2>Template Projects</h2>
+    <ul>
+        @foreach (var template in templates)
+        {
+            <li>
+                <h3>@template.Name</h3>
+                <p>Files: @template.Files.Count</p>
+                <form asp-controller="Projects" asp-action="CopyTemplate" method="post" class="mt-2">
+                    <input type="hidden" name="templateId" value="@template.Id" />
+                    <button type="submit" class="btn btn-secondary">Use Template</button>
+                </form>
+            </li>
+        }
+    </ul>
+}
+else
+{
+    <p>No templates available.</p>
 }

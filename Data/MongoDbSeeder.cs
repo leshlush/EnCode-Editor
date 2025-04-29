@@ -1,85 +1,81 @@
-﻿// Data/MongoDbSeeder.cs
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using MongoDB.Bson;
-using MongoDB.Driver;
+﻿using MongoDB.Driver;
 using SnapSaves.Models;
 
 namespace SnapSaves.Data
 {
     public class MongoDbSeeder
     {
-        private readonly MongoDbContext _context;
-        private readonly IServiceProvider _serviceProvider;
+        private readonly MongoDbContext _dbContext;
 
-        public MongoDbSeeder(MongoDbContext context, IServiceProvider serviceProvider)
+        public MongoDbSeeder(MongoDbContext dbContext)
         {
-            _context = context;
-            _serviceProvider = serviceProvider;
+            _dbContext = dbContext;
         }
 
         public async Task SeedAsync()
         {
-            // Check if database exists and has collections
-            var databaseExists = (await _context.Database.ListCollectionNamesAsync())
-                .Any();
-
-            if (!databaseExists)
-            {
-                
-                await SeedProjects();
-            }
+            await SeedTemplateProjects();
         }
 
-
-
-        private async Task SeedProjects()
+        private async Task SeedTemplateProjects()
         {
-            var testUser = await _context.Users.Find(u => u.Username == "testuser").FirstOrDefaultAsync();
-
-            if (testUser == null) return;
-
-            var projects = new List<Project>
-    {
-        new Project
-        {
-            Name = "Test Project 1",
-            UserId = testUser.Id,
-            CreatedAt = DateTime.UtcNow,
-            LastModified = DateTime.UtcNow,
-            Files = new List<ProjectFile>
+            var templateProjects = new List<Project>
             {
-                new ProjectFile
+                new Project
                 {
-                    Path = "index.html",
-                    Content = "<!DOCTYPE html><html><head><title>Test</title></head><body>Hello World</body></html>",
-                    IsDirectory = false
-                }
-            }
-        },
-        new Project
-        {
-            Name = "Test Project 2",
-            UserId = testUser.Id,
-            CreatedAt = DateTime.UtcNow,
-            LastModified = DateTime.UtcNow,
-            Files = new List<ProjectFile>
-            {
-                new ProjectFile
+                    Name = "Template 1",
+                    CreatedAt = DateTime.UtcNow,
+                    LastModified = DateTime.UtcNow,
+                    Files = new List<ProjectFile>
+                    {
+                        new ProjectFile
+                        {
+                            Path = "index.html",
+                            Content = "<!DOCTYPE html><html><head><title>Template 1</title></head><body><h1>Welcome to Template 1</h1></body></html>",
+                            IsDirectory = false
+                        },
+                        new ProjectFile
+                        {
+                            Path = "style.css",
+                            Content = "body { font-family: Arial, sans-serif; }",
+                            IsDirectory = false
+                        }
+                    }
+                },
+                new Project
                 {
-                    Path = "app.js",
-                    Content = "console.log('Test Project 2');",
-                    IsDirectory = false
+                    Name = "Template 2",
+                    CreatedAt = DateTime.UtcNow,
+                    LastModified = DateTime.UtcNow,
+                    Files = new List<ProjectFile>
+                    {
+                        new ProjectFile
+                        {
+                            Path = "main.js",
+                            Content = "console.log('Welcome to Template 2');",
+                            IsDirectory = false
+                        },
+                        new ProjectFile
+                        {
+                            Path = "README.md",
+                            Content = "# Template 2\nThis is a sample template project.",
+                            IsDirectory = false
+                        }
+                    }
                 }
+            };
+
+            // Check if the templates already exist
+            var existingTemplates = await _dbContext.TemplateProjects.Find(_ => true).ToListAsync();
+            if (!existingTemplates.Any())
+            {
+                await _dbContext.TemplateProjects.InsertManyAsync(templateProjects);
+                Console.WriteLine("Template projects seeded successfully.");
+            }
+            else
+            {
+                Console.WriteLine("Template projects already exist. Skipping seeding.");
             }
         }
-    };
-
-            await _context.Projects.InsertManyAsync(projects);
-        }
-
-
-       
     }
 }
