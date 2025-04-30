@@ -5,6 +5,7 @@ using SnapSaves.Auth;
 using SnapSaves.Data;
 using SnapSaves.Models;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure MySQL Identity
@@ -46,6 +47,11 @@ builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDbSettings"));
 builder.Services.AddSingleton<MongoDbContext>();
 builder.Services.AddTransient<MongoDbSeeder>();
+
+//Confiure LTI Settings
+builder.Services.Configure<LtiSettings>(
+    builder.Configuration.GetSection("LtiSettings"));
+
 
 // Add Controllers
 builder.Services.AddControllersWithViews();
