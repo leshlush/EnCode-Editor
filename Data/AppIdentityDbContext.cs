@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SnapSaves.Auth;
+using SnapSaves.Models;
 
 namespace SnapSaves.Data
 {
@@ -9,10 +10,19 @@ namespace SnapSaves.Data
         public AppIdentityDbContext(DbContextOptions<AppIdentityDbContext> options)
             : base(options) { }
 
+        public DbSet<LtiUser> LtiUsers { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
-            // Customize the ASP.NET Identity model if needed
+
+            // Configure LtiUser relationship
+            builder.Entity<LtiUser>()
+                .HasOne(l => l.AppUser)
+                .WithMany()
+                .HasForeignKey(l => l.UserId)
+                .IsRequired();
         }
+
     }
 }

@@ -1,21 +1,30 @@
-using System.Linq;
 using LtiLibrary.NetCore.Lti.v1;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
-using SnapSaves.Helpers;
+using SnapSaves.Auth;
+using SnapSaves.Data;
 using SnapSaves.Models;
+using MongoDB.Driver;
 
 namespace SnapSaves.Controllers
 {
     public class LtiController : Controller
     {
-        private readonly string _consumerKey;
-        private readonly string _sharedSecret;
+        private readonly AppIdentityDbContext _context;
+        private readonly UserManager<AppUser> _userManager;
+        private readonly SignInManager<AppUser> _signInManager;
+        private readonly MongoDbContext _mongoDb; // Add MongoDbContext
 
-        public LtiController(IOptions<LtiSettings> ltiSettings)
+        public LtiController(
+            AppIdentityDbContext context,
+            UserManager<AppUser> userManager,
+            SignInManager<AppUser> signInManager,
+            MongoDbContext mongoDb) // Inject MongoDbContext
         {
-            _consumerKey = ltiSettings.Value.ConsumerKey;
-            _sharedSecret = ltiSettings.Value.SharedSecret;
+            _context = context;
+            _userManager = userManager;
+            _signInManager = signInManager;
+            _mongoDb = mongoDb; // Assign MongoDbContext
         }
 
         [HttpPost]
@@ -24,63 +33,88 @@ namespace SnapSaves.Controllers
             // Read the form data from the HTTP request
             var form = await HttpContext.Request.ReadFormAsync();
 
-            // Log incoming form data
-            Console.WriteLine("Debug: Incoming form data:");
-            foreach (var kvp in form)
-            {
-                Console.WriteLine($"{kvp.Key} = {kvp.Value}");
-            }
-
-            // Validate required LTI parameters
-            var requiredParameters = new[] { "lti_message_type", "lti_version", "resource_link_id", "user_id" };
-            foreach (var param in requiredParameters)
-            {
-                if (!form.ContainsKey(param))
-                {
-                    Console.WriteLine($"Error: Missing required parameter: {param}");
-                    return BadRequest($"Missing required parameter: {param}");
-                }
-            }
-
-            // Create the LtiRequest object
+            // Create and initialize the LtiRequest object
             var ltiRequest = new LtiRequest
             {
-                ConsumerKey = _consumerKey,
+                ConsumerKey = form["oauth_consumer_key"],
                 HttpMethod = HttpContext.Request.Method,
                 Url = new Uri($"{HttpContext.Request.Scheme}://{HttpContext.Request.Host}{HttpContext.Request.Path}")
             };
 
-            // Add parameters to the LtiRequest
+            // Add all form parameters to the LtiRequest
             foreach (var kvp in form)
             {
-                if (kvp.Key != "oauth_signature")
+                ltiRequest.AddParameter(kvp.Key, kvp.Value);
+            }
+
+            // Check if the user exists in the AspNetUsers table
+            var identityUser = await _userManager.FindByNameAsync(ltiRequest.UserId);
+
+            if (identityUser == null)
+            {
+                // Step 1: Create a MongoDB user
+                var mongoUser = new User
                 {
-                    ltiRequest.AddParameter(kvp.Key, kvp.Value);
+                    Username = ltiRequest.UserId,
+                    Email = $"{ltiRequest.UserId}@example.com",
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _mongoDb.Users.InsertOneAsync(mongoUser);
+
+                // Step 2: Create an Identity user with the MongoUserId
+                identityUser = new AppUser
+                {
+                    UserName = ltiRequest.UserId,
+                    Email = $"{ltiRequest.UserId}@example.com",
+                    FirstName = "DefaultFirstName", // Replace with actual data if available
+                    LastName = "DefaultLastName",   // Replace with actual data if available
+                    MongoUserId = mongoUser.Id,     // Link to the MongoDB user
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                var result = await _userManager.CreateAsync(identityUser);
+
+                if (!result.Succeeded)
+                {
+                    // Clean up MongoDB user if Identity creation fails
+                    await _mongoDb.Users.DeleteOneAsync(u => u.Id == mongoUser.Id);
+
+                    foreach (var error in result.Errors)
+                    {
+                        Console.WriteLine($"Error: {error.Code} - {error.Description}");
+                    }
+                    return BadRequest("Failed to create user.");
                 }
             }
 
-            // Validate the OAuth signature
-            var providedSignature = form["oauth_signature"];
-            var generatedSignature = LtiSignatureGenerator.GenerateSignature(ltiRequest, _sharedSecret);
+            // Check if the user exists in the LtiUsers table
+            var ltiUser = _context.LtiUsers.FirstOrDefault(u => u.UserId == identityUser.Id);
 
-            Console.WriteLine($"Generated Signature: {generatedSignature}");
-            Console.WriteLine($"Provided Signature: {providedSignature}");
-
-            if (generatedSignature != providedSignature)
+            if (ltiUser == null)
             {
-                Console.WriteLine("Error: Invalid OAuth signature.");
-                return Unauthorized("Invalid OAuth signature.");
+                // Step 3: Create an entry in the LtiUsers table
+                ltiUser = new LtiUser
+                {
+                    UserId = identityUser.Id, // Link to the AppUser.Id
+                    ResourceLinkId = ltiRequest.ResourceLinkId,
+                    Roles = ltiRequest.Roles,
+                    ContextId = ltiRequest.ContextId,
+                    ContextTitle = ltiRequest.ContextTitle,
+                    ContextLabel = ltiRequest.ContextLabel,
+                    ToolConsumerInstanceGuid = ltiRequest.ToolConsumerInstanceGuid,
+                    ToolConsumerInstanceName = ltiRequest.ToolConsumerInstanceName
+                };
+
+                _context.LtiUsers.Add(ltiUser);
+                await _context.SaveChangesAsync();
             }
 
-            // Extract LTI parameters for logging
-            var userId = ltiRequest.UserId;
-            var roles = ltiRequest.Roles;
-            var resourceLinkId = ltiRequest.ResourceLinkId;
-
-            Console.WriteLine($"LTI Launch: UserId={userId}, Roles={roles}, ResourceLinkId={resourceLinkId}");
+            // Log the user in
+            await _signInManager.SignInAsync(identityUser, isPersistent: false);
 
             // Respond with the appropriate content
             return View("LtiLaunch", ltiRequest);
         }
+
     }
 }
