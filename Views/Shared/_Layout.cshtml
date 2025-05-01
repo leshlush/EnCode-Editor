@@ -39,6 +39,10 @@
                                 <a class="nav-link text-dark" asp-controller="Projects" asp-action="Index">Projects</a>
                             </li>
                         }
+                        @if (User.IsInRole("Teacher"))
+                        {
+                            <li><a href="/Students">View Students</a></li>
+                        }
                     </ul>
                     <ul class="navbar-nav">
                         @if (User.Identity.IsAuthenticated)

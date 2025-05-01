@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using SnapSaves.Data;
 using SnapSaves.Models;
@@ -14,7 +15,7 @@ namespace SnapSaves.Controllers
             _dbContext = dbContext;
         }
 
-        [HttpGet]
+
         [HttpGet]
         public async Task<IActionResult> Index()
         {
@@ -24,6 +25,13 @@ namespace SnapSaves.Controllers
 
                 if (!string.IsNullOrEmpty(userId))
                 {
+                    // Validate that userId is a valid ObjectId
+                    if (!ObjectId.TryParse(userId, out _))
+                    {
+                        Console.WriteLine($"Invalid MongoUserId: {userId}");
+                        return BadRequest("Invalid MongoUserId format.");
+                    }
+
                     // Fetch user projects
                     var userProjects = await _dbContext.Projects
                         .Find(p => p.UserId == userId)
@@ -42,6 +50,8 @@ namespace SnapSaves.Controllers
 
             return View(new List<Project>());
         }
+
+
 
 
         [HttpGet]

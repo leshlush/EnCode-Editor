@@ -5,6 +5,7 @@ using SnapSaves.Auth;
 using SnapSaves.Data;
 using SnapSaves.Models;
 using MongoDB.Driver;
+using MongoDB.Bson;
 
 namespace SnapSaves.Controllers
 {
@@ -28,6 +29,7 @@ namespace SnapSaves.Controllers
         }
 
         [HttpPost]
+        [HttpPost]
         public async Task<IActionResult> Launch()
         {
             // Read the form data from the HTTP request
@@ -41,10 +43,23 @@ namespace SnapSaves.Controllers
                 Url = new Uri($"{HttpContext.Request.Scheme}://{HttpContext.Request.Host}{HttpContext.Request.Path}")
             };
 
-            // Add all form parameters to the LtiRequest
             foreach (var kvp in form)
             {
                 ltiRequest.AddParameter(kvp.Key, kvp.Value);
+            }
+
+            // Determine the user's role based on the LTI request
+            string userRole = "Student"; // Default to "Student"
+            if (!string.IsNullOrEmpty(ltiRequest.Roles))
+            {
+                if (ltiRequest.Roles.Contains("Instructor", StringComparison.OrdinalIgnoreCase))
+                {
+                    userRole = "Teacher";
+                }
+                else if (ltiRequest.Roles.Contains("Learner", StringComparison.OrdinalIgnoreCase))
+                {
+                    userRole = "Student";
+                }
             }
 
             // Check if the user exists in the AspNetUsers table
@@ -52,69 +67,63 @@ namespace SnapSaves.Controllers
 
             if (identityUser == null)
             {
-                // Step 1: Create a MongoDB user
-                var mongoUser = new User
-                {
-                    Username = ltiRequest.UserId,
-                    Email = $"{ltiRequest.UserId}@example.com",
-                    CreatedAt = DateTime.UtcNow
-                };
-                await _mongoDb.Users.InsertOneAsync(mongoUser);
-
-                // Step 2: Create an Identity user with the MongoUserId
+                // Step 1: Create a new user
                 identityUser = new AppUser
                 {
                     UserName = ltiRequest.UserId,
                     Email = $"{ltiRequest.UserId}@example.com",
-                    FirstName = "DefaultFirstName", // Replace with actual data if available
-                    LastName = "DefaultLastName",   // Replace with actual data if available
-                    MongoUserId = mongoUser.Id,     // Link to the MongoDB user
-                    CreatedAt = DateTime.UtcNow
+                    FirstName = "DefaultFirstName",
+                    LastName = "DefaultLastName",
+                    MongoUserId = ObjectId.GenerateNewId().ToString(), 
+                    CreatedAt = DateTime.UtcNow,
+                    Role = userRole
                 };
+
+
 
                 var result = await _userManager.CreateAsync(identityUser);
 
                 if (!result.Succeeded)
                 {
-                    // Clean up MongoDB user if Identity creation fails
-                    await _mongoDb.Users.DeleteOneAsync(u => u.Id == mongoUser.Id);
-
-                    foreach (var error in result.Errors)
-                    {
-                        Console.WriteLine($"Error: {error.Code} - {error.Description}");
-                    }
                     return BadRequest("Failed to create user.");
                 }
-            }
 
-            // Check if the user exists in the LtiUsers table
-            var ltiUser = _context.LtiUsers.FirstOrDefault(u => u.UserId == identityUser.Id);
+                // Assign the user to the appropriate role
+                await _userManager.AddToRoleAsync(identityUser, userRole);
 
-            if (ltiUser == null)
-            {
-                // Step 3: Create an entry in the LtiUsers table
-                ltiUser = new LtiUser
+                // Step 2: Assign the user to a course
+                var course = _context.Courses.FirstOrDefault(c => c.Name == "Math 101");
+                if (course != null)
                 {
-                    UserId = identityUser.Id, // Link to the AppUser.Id
-                    ResourceLinkId = ltiRequest.ResourceLinkId,
-                    Roles = ltiRequest.Roles,
-                    ContextId = ltiRequest.ContextId,
-                    ContextTitle = ltiRequest.ContextTitle,
-                    ContextLabel = ltiRequest.ContextLabel,
-                    ToolConsumerInstanceGuid = ltiRequest.ToolConsumerInstanceGuid,
-                    ToolConsumerInstanceName = ltiRequest.ToolConsumerInstanceName
-                };
+                    _context.UserCourses.Add(new UserCourse
+                    {
+                        UserId = identityUser.Id,
+                        CourseId = course.Id
+                    });
+                    await _context.SaveChangesAsync();
+                }
+            }
+            else
+            {
+                // Handle pre-existing users without a role
+                if (string.IsNullOrEmpty(identityUser.Role))
+                {
+                    identityUser.Role = userRole; // Assign the role based on the LTI request
+                    var updateResult = await _userManager.UpdateAsync(identityUser);
 
-                _context.LtiUsers.Add(ltiUser);
-                await _context.SaveChangesAsync();
+                    if (!updateResult.Succeeded)
+                    {
+                        return BadRequest("Failed to update user role.");
+                    }
+                }
             }
 
             // Log the user in
             await _signInManager.SignInAsync(identityUser, isPersistent: false);
 
-            // Respond with the appropriate content
             return View("LtiLaunch", ltiRequest);
         }
+
 
     }
 }

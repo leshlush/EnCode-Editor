@@ -85,4 +85,34 @@ using (var scope = app.Services.CreateScope())
     await seeder.SeedAsync();
 }
 
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<AppIdentityDbContext>();
+
+    // Seed courses
+    if (!context.Courses.Any())
+    {
+        context.Courses.AddRange(
+            new Course { Name = "Math 101", Description = "Basic Math Course" },
+            new Course { Name = "Science 101", Description = "Basic Science Course" }
+        );
+        context.SaveChanges();
+    }
+}
+
+using(var scope = app.Services.CreateScope())
+{
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+    if (!await roleManager.RoleExistsAsync("Student"))
+    {
+        await roleManager.CreateAsync(new IdentityRole("Student"));
+    }
+
+    if (!await roleManager.RoleExistsAsync("Teacher"))
+    {
+        await roleManager.CreateAsync(new IdentityRole("Teacher"));
+    }
+}
+
 await app.RunAsync();

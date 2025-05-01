@@ -10,7 +10,9 @@ namespace SnapSaves.Data
         public AppIdentityDbContext(DbContextOptions<AppIdentityDbContext> options)
             : base(options) { }
 
-        public DbSet<LtiUser> LtiUsers { get; set; }
+        public DbSet<LtiUser> LtiUsers { get; set; } // Keep LtiUsers DbSet
+        public DbSet<Course> Courses { get; set; } // Add Courses DbSet
+        public DbSet<UserCourse> UserCourses { get; set; } // Add UserCourse DbSet
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -22,7 +24,25 @@ namespace SnapSaves.Data
                 .WithMany()
                 .HasForeignKey(l => l.UserId)
                 .IsRequired();
-        }
 
+            // Configure many-to-many relationship between AppUser and Course
+            builder.Entity<UserCourse>()
+                .HasKey(uc => new { uc.UserId, uc.CourseId });
+
+            builder.Entity<UserCourse>()
+                .HasOne(uc => uc.User)
+                .WithMany(u => u.UserCourses)
+                .HasForeignKey(uc => uc.UserId);
+
+            builder.Entity<UserCourse>()
+                .HasOne(uc => uc.Course)
+                .WithMany(c => c.UserCourses)
+                .HasForeignKey(uc => uc.CourseId);
+
+            // Configure AppUser Role
+            builder.Entity<AppUser>()
+                .Property(u => u.Role)
+                .IsRequired();
+        }
     }
 }

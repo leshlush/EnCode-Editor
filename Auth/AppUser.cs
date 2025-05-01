@@ -1,16 +1,22 @@
 ﻿// Auth/AppUser.cs
 using Microsoft.AspNetCore.Identity;
+using SnapSaves.Models;
 
 namespace SnapSaves.Auth
 {
     public class AppUser : IdentityUser
     {
-        // Link to MongoDB User
         public string MongoUserId { get; set; }
-
-        // Additional fields
         public string FirstName { get; set; }
         public string LastName { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; }
+
+        // Role: "Student" or "Teacher"
+        public string Role { get; set; }
+
+        // Many-to-Many relationship with Course
+        public ICollection<UserCourse> UserCourses { get; set; }
     }
+
+
 }
