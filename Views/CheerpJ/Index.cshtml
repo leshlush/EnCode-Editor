@@ -12,17 +12,36 @@
 <body>
     <h1>CheerpJ Test</h1>
     <div id="cheerpj-container"></div>
+    <script src="/Assets/cjdom.js"></script>
     <script>
-        (async function () {
-            // Initialize CheerpJ
-            await cheerpjInit({ version: 11 });
+           var hash = window.location.hash;
+        if (hash != null && hash.length > 2) {
+          hash = hash.substring(1);
+        }
 
-            // Create a display for the application
-            cheerpjCreateDisplay(800, 600);
+                (async function () {
+            try {
+                var initParams = { version: 11, natives: cjdomNativeMethods };
+                var classPath = "/app/Assets/CJDom-2025.04.jar:" +
+                                "/app/Assets/SnapCJ-2025.04.jar:" +
+                                "/app/Assets/SnapKit-2025.04.jar:" +
+                                "/app/Assets/SnapCode-2025.04.jar:" +
+                                "/app/Assets/jdk.compiler.jar:" +
+                                "/app/Assets/SnapBuilder-2025.04.jar:" +
+                                "/app/Assets/Greenfoot-2025.04.jar";
 
-            // Run the JAR file from the assets folder
-            await cheerpjRunJar("/app/Assets/SnapCode-2025.04.jar");
+                console.log("Initializing CheerpJ...");
+                await cheerpjInit(initParams);
+                console.log("CheerpJ initialized successfully.");
+
+                console.log("Running main class...");
+                await cheerpjRunMain("snapcode.app.App", classPath, window.location.hash);
+                console.log("Main class executed successfully.");
+            } catch (error) {
+                console.error("Error initializing or running CheerpJ:", error);
+            }
         })();
+
     </script>
 </body>
 </html>
