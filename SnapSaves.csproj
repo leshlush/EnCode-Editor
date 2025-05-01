@@ -8,6 +8,9 @@
     <Compile Remove="Data\ApplicationDbContext.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="wwwroot\Assets\SnapCodeAll-2025.04.jar" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="EntityFramework" Version="6.5.1" />
     <PackageReference Include="LtiLibrary.AspNetCore" Version="3.2.9" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.4" />

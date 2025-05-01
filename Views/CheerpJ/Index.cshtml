@@ -1,0 +1,28 @@
+﻿@{
+    ViewData["Title"] = "CheerpJ Test";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewData["Title"]</title>
+    <script src="https://cjrtnc.leaningtech.com/4.0/loader.js"></script>
+</head>
+<body>
+    <h1>CheerpJ Test</h1>
+    <div id="cheerpj-container"></div>
+    <script>
+        (async function () {
+            // Initialize CheerpJ
+            await cheerpjInit({ version: 11 });
+
+            // Create a display for the application
+            cheerpjCreateDisplay(800, 600);
+
+            // Run the JAR file from the assets folder
+            await cheerpjRunJar("/app/Assets/SnapCode-2025.04.jar");
+        })();
+    </script>
+</body>
+</html>
