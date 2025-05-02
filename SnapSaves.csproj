@@ -8,6 +8,9 @@
     <Compile Remove="Data\ApplicationDbContext.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Remove="wwwroot\Assets\index.html" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="wwwroot\Assets\SnapCodeAll-2025.04.jar" />
   </ItemGroup>
   <ItemGroup>

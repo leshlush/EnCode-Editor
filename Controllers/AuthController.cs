@@ -9,6 +9,7 @@ using SnapSaves.Models.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
 using System.Security.Claims;
+using SnapSaves.Helpers;
 namespace SnapSaves.Controllers
 {
     public class AuthController : Controller
@@ -44,51 +45,24 @@ namespace SnapSaves.Controllers
                 return View(model);
             }
 
-            try
+            var userHelper = new UserHelper(_mongoDb, _userManager);
+            var (success, errorMessage) = await userHelper.CreateUserAsync(
+                model.Email,
+                model.Password,
+                model.FirstName,
+                model.LastName,
+                "Student"
+            );
+
+            if (!success)
             {
-                // 1. First create MongoDB user
-                var mongoUser = new User
-                {
-                    Username = model.Username,
-                    Email = model.Email,
-                    CreatedAt = DateTime.UtcNow
-                };
-                await _mongoDb.Users.InsertOneAsync(mongoUser);
-
-                // 2. Then create Identity user with the MongoUserId
-                var user = new AppUser
-                {
-                    UserName = model.Email,
-                    Email = model.Email,
-                    FirstName = model.FirstName,
-                    LastName = model.LastName,
-                    MongoUserId = mongoUser.Id // Set this BEFORE creating the Identity user
-                };
-
-                var result = await _userManager.CreateAsync(user, model.Password);
-
-                if (!result.Succeeded)
-                {
-                    // Clean up MongoDB user if Identity creation fails
-                    await _mongoDb.Users.DeleteOneAsync(u => u.Id == mongoUser.Id);
-
-                    foreach (var error in result.Errors)
-                    {
-                        ModelState.AddModelError(string.Empty, error.Description);
-                    }
-                    return View(model);
-                }
-
-                await _signInManager.SignInAsync(user, isPersistent: false);
-                return RedirectToAction("Index", "Home");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during user registration");
-                ModelState.AddModelError("", "An error occurred during registration");
+                ModelState.AddModelError(string.Empty, errorMessage);
                 return View(model);
             }
+
+            return RedirectToAction("Index", "Home");
         }
+
 
         [HttpGet]
         public IActionResult Login(string returnUrl = null)
