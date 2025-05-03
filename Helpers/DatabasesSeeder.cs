@@ -157,17 +157,17 @@ namespace SnapSaves.Helpers
         private async Task SeedTemplatesAsync(List<Course> courses)
         {
             var templates = new List<(string Name, string Description)>
-            {
-                ("Template 1", "Description for Template 1"),
-                ("Template 2", "Description for Template 2"),
-                ("Template 3", "Description for Template 3"),
-                ("Template 4", "Description for Template 4"),
-                ("Template 5", "Description for Template 5"),
-                ("Template 6", "Description for Template 6"),
-                ("Template 7", "Description for Template 7"),
-                ("Template 8", "Description for Template 8"),
-                ("Template 9", "Description for Template 9")
-            };
+    {
+        ("Template 1", "Description for Template 1"),
+        ("Template 2", "Description for Template 2"),
+        ("Template 3", "Description for Template 3"),
+        ("Template 4", "Description for Template 4"),
+        ("Template 5", "Description for Template 5"),
+        ("Template 6", "Description for Template 6"),
+        ("Template 7", "Description for Template 7"),
+        ("Template 8", "Description for Template 8"),
+        ("Template 9", "Description for Template 9")
+    };
 
             for (int i = 0; i < templates.Count; i++)
             {
@@ -180,20 +180,20 @@ namespace SnapSaves.Helpers
                     CreatedAt = DateTime.UtcNow,
                     LastModified = DateTime.UtcNow,
                     Files = new List<ProjectFile>
-                    {
-                        new ProjectFile
-                        {
-                            Path = "index.html",
-                            Content = $"<html><head><title>{templates[i].Name}</title></head><body><h1>{templates[i].Name}</h1></body></html>",
-                            IsDirectory = false
-                        },
-                        new ProjectFile
-                        {
-                            Path = "style.css",
-                            Content = "body { font-family: Arial, sans-serif; }",
-                            IsDirectory = false
-                        }
-                    }
+            {
+                new ProjectFile
+                {
+                    Path = "index.html",
+                    Content = $"<html><head><title>{templates[i].Name}</title></head><body><h1>{templates[i].Name}</h1></body></html>",
+                    IsDirectory = false
+                },
+                new ProjectFile
+                {
+                    Path = "style.css",
+                    Content = "body { font-family: Arial, sans-serif; }",
+                    IsDirectory = false
+                }
+            }
                 };
 
                 // Use the new method to create a template from the project
@@ -202,7 +202,17 @@ namespace SnapSaves.Helpers
                 {
                     Console.WriteLine($"Failed to create template '{templates[i].Name}' for course '{course.Name}': {errorMessage}");
                 }
+                else
+                {
+                    // Ensure the template is added to the database
+                    var template = await _context.Templates.FirstOrDefaultAsync(t => t.MongoId == project.Id);
+                    if (template == null)
+                    {
+                        Console.WriteLine($"Template '{templates[i].Name}' was not added to the database.");
+                    }
+                }
             }
         }
+
     }
 }

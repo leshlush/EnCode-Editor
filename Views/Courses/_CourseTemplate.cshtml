@@ -1,0 +1,11 @@
+﻿@model ICollection<SnapSaves.Models.CourseTemplate>
+
+<h2>Templates</h2>
+<ul>
+    @foreach (var courseTemplate in Model)
+    {
+        <li>
+            <strong>@courseTemplate.Template.Name</strong>: @courseTemplate.Template.Description
+        </li>
+    }
+</ul>

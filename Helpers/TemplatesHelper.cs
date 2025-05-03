@@ -16,54 +16,86 @@ namespace SnapSaves.Helpers
             _dbContext = dbContext;
         }
 
-        /// <summary>
-        /// Creates a new project in MongoDB, retrieves its MongoId, and creates a template from it.
-        /// </summary>
-        /// <param name="project">The project object to insert into MongoDB.</param>
-        /// <param name="courseId">The ID of the course to assign the template to.</param>
-        /// <returns>A boolean indicating success or failure, and an error message if applicable.</returns>
         public async Task<(bool Success, string ErrorMessage)> CreateNewProjectTemplateAsync(Project project, int courseId)
         {
+            IClientSessionHandle? session = null; // Nullable session for safe handling
+            bool isReplicaSet = false;
+
             try
             {
+                // Check if the MongoDB server supports transactions
+                isReplicaSet = _mongoDbContext.GetMongoClusterType() == MongoDB.Driver.Core.Clusters.ClusterType.ReplicaSet;
+
+                if (isReplicaSet)
+                {
+                    session = await _mongoDbContext.StartSessionAsync();
+                    session.StartTransaction();
+                }
+
                 // Step 1: Insert the provided project into MongoDB
-                await _mongoDbContext.Projects.InsertOneAsync(project);
+                if (isReplicaSet && session != null)
+                {
+                    await _mongoDbContext.Projects.InsertOneAsync(session, project);
+                }
+                else
+                {
+                    await _mongoDbContext.Projects.InsertOneAsync(project);
+                }
 
                 // Step 2: Retrieve the MongoId of the newly created project
                 var mongoId = project.Id;
                 if (string.IsNullOrEmpty(mongoId))
                 {
+                    if (isReplicaSet && session != null)
+                    {
+                        await session.AbortTransactionAsync();
+                    }
                     return (false, "Failed to retrieve MongoId for the new project.");
                 }
 
                 // Step 3: Create a template from the newly created project
-                return await CreateTemplateFromProjectAsync(mongoId, courseId);
+                var result = await CreateTemplateFromProjectAsync(mongoId, courseId, session, isReplicaSet);
+
+                if (isReplicaSet && session != null)
+                {
+                    if (result.Success)
+                    {
+                        await session.CommitTransactionAsync();
+                    }
+                    else
+                    {
+                        await session.AbortTransactionAsync();
+                    }
+                }
+
+                return result;
             }
             catch (Exception ex)
             {
+                if (isReplicaSet && session != null && session.IsInTransaction)
+                {
+                    await session.AbortTransactionAsync();
+                }
                 return (false, ex.Message);
+            }
+            finally
+            {
+                session?.Dispose();
             }
         }
 
-
-        /// <summary>
-        /// Creates a template from an existing MongoDB project, assigns it to a course, and updates the MySQL database.
-        /// </summary>
-        /// <param name="projectId">The MongoDB ID of the project to use as a template.</param>
-        /// <param name="courseId">The ID of the course to assign the template to.</param>
-        /// <returns>A boolean indicating success or failure, and an error message if applicable.</returns>
-        public async Task<(bool Success, string ErrorMessage)> CreateTemplateFromProjectAsync(string projectId, int courseId)
+        public async Task<(bool Success, string ErrorMessage)> CreateTemplateFromProjectAsync(
+            string projectId,
+            int courseId,
+            IClientSessionHandle? session,
+            bool isReplicaSet)
         {
-            using var session = await _mongoDbContext.StartSessionAsync();
-
-            session.StartTransaction();
-
             try
             {
                 // Step 1: Fetch the project from the Projects collection
-                var project = await _mongoDbContext.Projects
-                    .Find(p => p.Id == projectId)
-                    .FirstOrDefaultAsync();
+                var project = isReplicaSet && session != null
+                    ? await _mongoDbContext.Projects.Find(session, p => p.Id == projectId).FirstOrDefaultAsync()
+                    : await _mongoDbContext.Projects.Find(p => p.Id == projectId).FirstOrDefaultAsync();
 
                 if (project == null)
                 {
@@ -71,10 +103,24 @@ namespace SnapSaves.Helpers
                 }
 
                 // Step 2: Insert the project into the TemplateProjects collection
-                await _mongoDbContext.TemplateProjects.InsertOneAsync(session, project);
+                if (isReplicaSet && session != null)
+                {
+                    await _mongoDbContext.TemplateProjects.InsertOneAsync(session, project);
+                }
+                else
+                {
+                    await _mongoDbContext.TemplateProjects.InsertOneAsync(project);
+                }
 
                 // Step 3: Remove the project from the Projects collection
-                await _mongoDbContext.Projects.DeleteOneAsync(session, p => p.Id == projectId);
+                if (isReplicaSet && session != null)
+                {
+                    await _mongoDbContext.Projects.DeleteOneAsync(session, p => p.Id == projectId);
+                }
+                else
+                {
+                    await _mongoDbContext.Projects.DeleteOneAsync(p => p.Id == projectId);
+                }
 
                 // Step 4: Create a new template in MySQL
                 var template = new Template
@@ -103,18 +149,117 @@ namespace SnapSaves.Helpers
                 _dbContext.CourseTemplates.Add(courseTemplate);
                 await _dbContext.SaveChangesAsync();
 
-                // Commit the MongoDB transaction
-                await session.CommitTransactionAsync();
+                return (true, string.Empty);
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.Message);
+            }
+        }
+
+        public async Task<(bool Success, string ErrorMessage)> CreateTemplateFromProjectAsync(string projectId, int courseId)
+        {
+            IClientSessionHandle? session = null; // Nullable session for safe handling
+            bool isReplicaSet = false;
+
+            try
+            {
+                // Check if the MongoDB server supports transactions
+                isReplicaSet = _mongoDbContext.GetMongoClusterType() == MongoDB.Driver.Core.Clusters.ClusterType.ReplicaSet;
+
+                if (isReplicaSet)
+                {
+                    session = await _mongoDbContext.StartSessionAsync();
+                    session.StartTransaction();
+                }
+
+                // Step 1: Fetch the project from the Projects collection
+                var project = isReplicaSet && session != null
+                    ? await _mongoDbContext.Projects.Find(session, p => p.Id == projectId).FirstOrDefaultAsync()
+                    : await _mongoDbContext.Projects.Find(p => p.Id == projectId).FirstOrDefaultAsync();
+
+                if (project == null)
+                {
+                    if (isReplicaSet && session != null)
+                    {
+                        await session.AbortTransactionAsync();
+                    }
+                    return (false, "Project not found in MongoDB.");
+                }
+
+                // Step 2: Insert the project into the TemplateProjects collection
+                if (isReplicaSet && session != null)
+                {
+                    await _mongoDbContext.TemplateProjects.InsertOneAsync(session, project);
+                }
+                else
+                {
+                    await _mongoDbContext.TemplateProjects.InsertOneAsync(project);
+                }
+
+                // Step 3: Remove the project from the Projects collection
+                if (isReplicaSet && session != null)
+                {
+                    await _mongoDbContext.Projects.DeleteOneAsync(session, p => p.Id == projectId);
+                }
+                else
+                {
+                    await _mongoDbContext.Projects.DeleteOneAsync(p => p.Id == projectId);
+                }
+
+                // Step 4: Create a new template in MySQL
+                var template = new Template
+                {
+                    MongoId = project.Id,
+                    Name = project.Name,
+                    Description = "Template created from project: " + project.Name
+                };
+
+                _dbContext.Templates.Add(template);
+                await _dbContext.SaveChangesAsync();
+
+                // Step 5: Assign the template to the course
+                var course = await _dbContext.Courses.FindAsync(courseId);
+                if (course == null)
+                {
+                    if (isReplicaSet && session != null)
+                    {
+                        await session.AbortTransactionAsync();
+                    }
+                    return (false, "Course not found in MySQL.");
+                }
+
+                var courseTemplate = new CourseTemplate
+                {
+                    CourseId = course.Id,
+                    TemplateId = template.Id
+                };
+
+                _dbContext.CourseTemplates.Add(courseTemplate);
+                await _dbContext.SaveChangesAsync();
+
+                if (isReplicaSet && session != null)
+                {
+                    await session.CommitTransactionAsync();
+                }
 
                 return (true, string.Empty);
             }
             catch (Exception ex)
             {
-                // Abort the MongoDB transaction in case of an error
-                await session.AbortTransactionAsync();
+                if (isReplicaSet && session != null && session.IsInTransaction)
+                {
+                    await session.AbortTransactionAsync();
+                }
                 return (false, ex.Message);
             }
+            finally
+            {
+                session?.Dispose();
+            }
         }
+
+
 
     }
 }

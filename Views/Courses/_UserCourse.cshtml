@@ -1,0 +1,9 @@
+﻿@model ICollection<SnapSaves.Models.UserCourse>
+
+<h2>Students</h2>
+<ul>
+    @foreach (var userCourse in Model)
+    {
+        <li>@userCourse.User.FirstName @userCourse.User.LastName (@userCourse.User.Email)</li>
+    }
+</ul>

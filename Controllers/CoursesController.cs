@@ -44,10 +44,12 @@ namespace SnapSaves.Controllers
         [HttpGet]
         public async Task<IActionResult> Details(int id)
         {
-            // Fetch the course by ID
+            // Fetch the course by ID, including associated templates and students
             var course = await _context.Courses
                 .Include(c => c.UserCourses)
-                .ThenInclude(uc => uc.User)
+                    .ThenInclude(uc => uc.User)
+                .Include(c => c.CourseTemplates)
+                    .ThenInclude(ct => ct.Template)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (course == null)

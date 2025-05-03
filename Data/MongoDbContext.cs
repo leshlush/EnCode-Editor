@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Clusters;
 using SnapSaves.Data;
 using SnapSaves.Models;
 
@@ -11,6 +12,11 @@ public class MongoDbContext
     {
         var client = new MongoClient(settings.Value.ConnectionString);
         _database = client.GetDatabase(settings.Value.DatabaseName);
+    }
+
+    public ClusterType GetMongoClusterType()
+    {
+        return _database.Client.Cluster.Description.Type;
     }
 
     public Task<IClientSessionHandle> StartSessionAsync()
