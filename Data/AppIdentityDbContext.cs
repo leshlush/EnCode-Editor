@@ -13,36 +13,32 @@ namespace SnapSaves.Data
         public DbSet<LtiUser> LtiUsers { get; set; } // Keep LtiUsers DbSet
         public DbSet<Course> Courses { get; set; } // Add Courses DbSet
         public DbSet<UserCourse> UserCourses { get; set; } // Add UserCourse DbSet
-
+        public DbSet<CourseTemplate> CourseTemplates {  get; set; } // Add CourseTemplates DbSet
+        public DbSet<Template> Templates { get; set; } // Add Templates DbSet
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
 
-            // Configure LtiUser relationship
-            builder.Entity<LtiUser>()
-                .HasOne(l => l.AppUser)
-                .WithMany()
-                .HasForeignKey(l => l.UserId)
-                .IsRequired();
-
-            // Configure many-to-many relationship between AppUser and Course
+            // Define composite key for UserCourse
             builder.Entity<UserCourse>()
                 .HasKey(uc => new { uc.UserId, uc.CourseId });
 
-            builder.Entity<UserCourse>()
-                .HasOne(uc => uc.User)
-                .WithMany(u => u.UserCourses)
-                .HasForeignKey(uc => uc.UserId);
 
-            builder.Entity<UserCourse>()
-                .HasOne(uc => uc.Course)
-                .WithMany(c => c.UserCourses)
-                .HasForeignKey(uc => uc.CourseId);
+            // Configure relationships for CourseTemplate if necessary
+            builder.Entity<CourseTemplate>()
+                .HasKey(ct => new { ct.CourseId, ct.TemplateId });
 
-            // Configure AppUser Role
-            builder.Entity<AppUser>()
-                .Property(u => u.Role)
-                .IsRequired();
+            builder.Entity<CourseTemplate>()
+                .HasOne(ct => ct.Course)
+                .WithMany(c => c.CourseTemplates)
+                .HasForeignKey(ct => ct.CourseId);
+
+            builder.Entity<CourseTemplate>()
+                .HasOne(ct => ct.Template)
+                .WithMany(t => t.CourseTemplates)
+                .HasForeignKey(ct => ct.TemplateId);
         }
+
+
     }
 }

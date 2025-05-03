@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SnapSaves.Data;
 
@@ -11,9 +12,11 @@ using SnapSaves.Data;
 namespace SnapSaves.Data.Migrations.Identity
 {
     [DbContext(typeof(AppIdentityDbContext))]
-    partial class AppIdentityDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250502153347_AddCourseTemplateRelationShip")]
+    partial class AddCourseTemplateRelationShip
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -270,7 +273,7 @@ namespace SnapSaves.Data.Migrations.Identity
 
                     b.HasIndex("TemplateId");
 
-                    b.ToTable("CourseTemplates");
+                    b.ToTable("CourseTemplate");
                 });
 
             modelBuilder.Entity("SnapSaves.Models.LtiUser", b =>
@@ -335,17 +338,13 @@ namespace SnapSaves.Data.Migrations.Identity
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<string>("MongoId")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("longtext");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Templates");
+                    b.ToTable("Template");
                 });
 
             modelBuilder.Entity("SnapSaves.Models.UserCourse", b =>

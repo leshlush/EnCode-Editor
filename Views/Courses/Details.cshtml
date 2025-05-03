@@ -1,0 +1,32 @@
+﻿@model SnapSaves.Models.Course
+
+<h1>@Model.Name</h1>
+<p><strong>Description:</strong> @Model.Description</p>
+
+<h2>Enrolled Users</h2>
+@if (Model.UserCourses.Any())
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var userCourse in Model.UserCourses)
+            {
+                <tr>
+                    <td>@userCourse.User.FirstName @userCourse.User.LastName</td>
+                    <td>@userCourse.User.Email</td>
+                    <td>@userCourse.User.Role</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No users are enrolled in this course.</p>
+}

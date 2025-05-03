@@ -13,6 +13,11 @@ public class MongoDbContext
         _database = client.GetDatabase(settings.Value.DatabaseName);
     }
 
+    public Task<IClientSessionHandle> StartSessionAsync()
+    {
+        return _database.Client.StartSessionAsync();
+    }
+
     public IMongoCollection<User> Users => _database.GetCollection<User>("Users");
     public IMongoCollection<Project> Projects => _database.GetCollection<Project>("Projects");
     public IMongoCollection<Project> TemplateProjects => _database.GetCollection<Project>("TemplateProjects"); // New collection
