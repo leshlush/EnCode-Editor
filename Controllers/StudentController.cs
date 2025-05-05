@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using SnapSaves.Auth;
 using SnapSaves.Data;
-using SnapSaves.Models;
+using SnapSaves.Helpers;
 using Microsoft.EntityFrameworkCore;
 
 [Authorize]
@@ -25,24 +25,32 @@ public class StudentsController : Controller
     {
         var currentUser = await _userManager.GetUserAsync(User);
 
-        if (currentUser == null || !await _permissionHelper.UserHasPermissionAsync(currentUser, "ViewStudents"))
+        // Ensure the user is logged in
+        if (currentUser == null)
         {
             return Forbid();
         }
 
-        // Get the courses the teacher is associated with
-        var teacherCourses = await _context.UserCourses
+        // Check if the user has the "ViewStudents" permission
+        if (!await _permissionHelper.UserHasPermissionAsync(currentUser, "ViewStudents"))
+        {
+            return Forbid();
+        }
+
+        // Get the courses the user is associated with
+        var userCourses = await _context.UserCourses
             .Where(uc => uc.UserId == currentUser.Id)
             .Select(uc => uc.CourseId)
             .ToListAsync();
 
-        // Get all students in the teacher's courses
+        // Get all students in the user's courses
         var students = await _context.UserCourses
-            .Where(uc => teacherCourses.Contains(uc.CourseId))
+            .Where(uc => userCourses.Contains(uc.CourseId))
             .Include(uc => uc.User)
             .Select(uc => uc.User)
             .ToListAsync();
 
         return View(students);
     }
+
 }

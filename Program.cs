@@ -46,7 +46,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<TemplateHelper>();
 builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<UserHelper>();
-
+builder.Services.AddScoped<PermissionHelper>();
 
 
 var app = builder.Build();

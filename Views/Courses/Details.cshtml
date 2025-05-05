@@ -1,17 +1,23 @@
 ﻿@model SnapSaves.Models.Course
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<SnapSaves.Auth.AppUser> UserManager
+@inject SnapSaves.Helpers.PermissionHelper PermissionHelper
 
 <h1>@Model.Name</h1>
 <p>@Model.Description</p>
 
 <!-- Tab navigation -->
 <ul class="nav nav-tabs" id="courseDetailsTabs" role="tablist">
+    @if (await PermissionHelper.UserHasPermissionAsync(await UserManager.GetUserAsync(User), "ViewStudents"))
+    {
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="students-tab" data-bs-toggle="tab" data-bs-target="#students" type="button" role="tab" aria-controls="students" aria-selected="true">
+                Students
+            </button>
+        </li>
+    }
     <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="students-tab" data-bs-toggle="tab" data-bs-target="#students" type="button" role="tab" aria-controls="students" aria-selected="true">
-            Students
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="templates-tab" data-bs-toggle="tab" data-bs-target="#templates" type="button" role="tab" aria-controls="templates" aria-selected="false">
+        <button class="nav-link @(!(await PermissionHelper.UserHasPermissionAsync(await UserManager.GetUserAsync(User), "ViewStudents")) ? "active" : "")" id="templates-tab" data-bs-toggle="tab" data-bs-target="#templates" type="button" role="tab" aria-controls="templates" aria-selected="false">
             Templates
         </button>
     </li>
@@ -19,12 +25,16 @@
 
 <!-- Tab content -->
 <div class="tab-content" id="courseDetailsTabContent">
-    <div class="tab-pane fade show active" id="students" role="tabpanel" aria-labelledby="students-tab">
-        <!-- Render the CourseStudents partial view -->
-        @await Html.PartialAsync("_UserCourse", Model.UserCourses)
-    </div>
-    <div class="tab-pane fade" id="templates" role="tabpanel" aria-labelledby="templates-tab">
+    @if (await PermissionHelper.UserHasPermissionAsync(await UserManager.GetUserAsync(User), "ViewStudents"))
+    {
+        <div class="tab-pane fade show active" id="students" role="tabpanel" aria-labelledby="students-tab">
+            <!-- Render the CourseStudents partial view -->
+            @await Html.PartialAsync("_UserCourse", Model.UserCourses)
+        </div>
+    }
+    <div class="tab-pane fade @(!(await PermissionHelper.UserHasPermissionAsync(await UserManager.GetUserAsync(User), "ViewStudents")) ? "show active" : "")" id="templates" role="tabpanel" aria-labelledby="templates-tab">
         <!-- Render the CourseTemplates partial view -->
         @await Html.PartialAsync("_CourseTemplate", Model.CourseTemplates)
     </div>
 </div>
+
