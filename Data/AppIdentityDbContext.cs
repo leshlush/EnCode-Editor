@@ -16,43 +16,70 @@ namespace SnapSaves.Data
         public DbSet<UserCourse> UserCourses { get; set; } // Add UserCourse DbSet
         public DbSet<CourseTemplate> CourseTemplates {  get; set; } // Add CourseTemplates DbSet
         public DbSet<Template> Templates { get; set; } // Add Templates DbSet
+        public DbSet<Permission> Permissions { get; set; }
+        public DbSet<RolePermission> RolePermissions { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
 
-            // Define composite key for CourseTemplate
+            // Configure RolePermission relationships
+            builder.Entity<RolePermission>()
+                .HasKey(rp => new { rp.RoleId, rp.PermissionId });
+
+            builder.Entity<RolePermission>()
+                .HasOne(rp => rp.Role)
+                .WithMany()
+                .HasForeignKey(rp => rp.RoleId);
+
+            builder.Entity<RolePermission>()
+                .HasOne(rp => rp.Permission)
+                .WithMany(p => p.RolePermissions)
+                .HasForeignKey(rp => rp.PermissionId);
+
+            // Configure CourseTemplate relationships
             builder.Entity<CourseTemplate>()
                 .HasKey(ct => new { ct.CourseId, ct.TemplateId });
 
-            // Define relationships for CourseTemplate
             builder.Entity<CourseTemplate>()
                 .HasOne(ct => ct.Course)
                 .WithMany(c => c.CourseTemplates)
-                .HasForeignKey(ct => ct.CourseId);
+                .HasForeignKey(ct => ct.CourseId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<CourseTemplate>()
                 .HasOne(ct => ct.Template)
                 .WithMany(t => t.CourseTemplates)
-                .HasForeignKey(ct => ct.TemplateId);
+                .HasForeignKey(ct => ct.TemplateId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-            // Define composite key for UserCourse
+            // Configure UserCourse relationships
             builder.Entity<UserCourse>()
                 .HasKey(uc => new { uc.UserId, uc.CourseId });
 
-            // Configure relationships for IdentityUserRole
-            builder.Entity<IdentityUserRole<string>>()
-                .HasKey(ur => new { ur.UserId, ur.RoleId });
+            builder.Entity<UserCourse>()
+                .HasOne(uc => uc.User)
+                .WithMany(u => u.UserCourses)
+                .HasForeignKey(uc => uc.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-            builder.Entity<IdentityUserRole<string>>()
-                .HasOne<IdentityRole>()
+            builder.Entity<UserCourse>()
+                .HasOne(uc => uc.Course)
+                .WithMany(c => c.UserCourses)
+                .HasForeignKey(uc => uc.CourseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure LtiUser relationships
+            builder.Entity<LtiUser>()
+                .HasOne(lu => lu.AppUser)
                 .WithMany()
-                .HasForeignKey(ur => ur.RoleId);
+                .HasForeignKey(lu => lu.AppUserId)
+                .IsRequired(false);
 
-            builder.Entity<IdentityUserRole<string>>()
-                .HasOne<AppUser>()
-                .WithMany(u => u.Roles)
-                .HasForeignKey(ur => ur.UserId);
+            // Additional configurations for other entities can go here...
         }
+
+
 
 
 

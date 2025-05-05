@@ -60,7 +60,60 @@ namespace SnapSaves.Helpers
             {
                 await _roleManager.CreateAsync(new IdentityRole("Student"));
             }
+
+            // Seed permissions
+            var permissions = new List<Permission>
+    {
+        new Permission { Name = "ViewCourses" },
+        new Permission { Name = "EditCourses" },
+        new Permission { Name = "ViewStudents" }
+    };
+
+            foreach (var permission in permissions)
+            {
+                if (!_context.Permissions.Any(p => p.Name == permission.Name))
+                {
+                    _context.Permissions.Add(permission);
+                }
+            }
+            await _context.SaveChangesAsync();
+
+            // Assign permissions to roles
+            var teacherRole = await _roleManager.FindByNameAsync("Teacher");
+            var studentRole = await _roleManager.FindByNameAsync("Student");
+
+            var teacherPermissions = new[] { "ViewCourses", "EditCourses", "ViewStudents" };
+            var studentPermissions = new[] { "ViewCourses" };
+
+            foreach (var permissionName in teacherPermissions)
+            {
+                var permission = _context.Permissions.FirstOrDefault(p => p.Name == permissionName);
+                if (permission != null && !_context.RolePermissions.Any(rp => rp.RoleId == teacherRole.Id && rp.PermissionId == permission.Id))
+                {
+                    _context.RolePermissions.Add(new RolePermission
+                    {
+                        RoleId = teacherRole.Id,
+                        PermissionId = permission.Id
+                    });
+                }
+            }
+
+            foreach (var permissionName in studentPermissions)
+            {
+                var permission = _context.Permissions.FirstOrDefault(p => p.Name == permissionName);
+                if (permission != null && !_context.RolePermissions.Any(rp => rp.RoleId == studentRole.Id && rp.PermissionId == permission.Id))
+                {
+                    _context.RolePermissions.Add(new RolePermission
+                    {
+                        RoleId = studentRole.Id,
+                        PermissionId = permission.Id
+                    });
+                }
+            }
+
+            await _context.SaveChangesAsync();
         }
+
 
         private async Task<List<Course>> SeedCoursesAsync()
         {

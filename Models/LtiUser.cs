@@ -23,6 +23,7 @@ namespace SnapSaves.Models
 
         // Navigation property
         public AppUser AppUser { get; set; }
+        public string AppUserId { get; set; }
     }
 
 }
