@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SnapSaves.Auth;
 using SnapSaves.Models;
@@ -19,15 +20,11 @@ namespace SnapSaves.Data
         {
             base.OnModelCreating(builder);
 
-            // Define composite key for UserCourse
-            builder.Entity<UserCourse>()
-                .HasKey(uc => new { uc.UserId, uc.CourseId });
-
-
-            // Configure relationships for CourseTemplate if necessary
+            // Define composite key for CourseTemplate
             builder.Entity<CourseTemplate>()
                 .HasKey(ct => new { ct.CourseId, ct.TemplateId });
 
+            // Define relationships for CourseTemplate
             builder.Entity<CourseTemplate>()
                 .HasOne(ct => ct.Course)
                 .WithMany(c => c.CourseTemplates)
@@ -37,7 +34,26 @@ namespace SnapSaves.Data
                 .HasOne(ct => ct.Template)
                 .WithMany(t => t.CourseTemplates)
                 .HasForeignKey(ct => ct.TemplateId);
+
+            // Define composite key for UserCourse
+            builder.Entity<UserCourse>()
+                .HasKey(uc => new { uc.UserId, uc.CourseId });
+
+            // Configure relationships for IdentityUserRole
+            builder.Entity<IdentityUserRole<string>>()
+                .HasKey(ur => new { ur.UserId, ur.RoleId });
+
+            builder.Entity<IdentityUserRole<string>>()
+                .HasOne<IdentityRole>()
+                .WithMany()
+                .HasForeignKey(ur => ur.RoleId);
+
+            builder.Entity<IdentityUserRole<string>>()
+                .HasOne<AppUser>()
+                .WithMany(u => u.Roles)
+                .HasForeignKey(ur => ur.UserId);
         }
+
 
 
     }

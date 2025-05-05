@@ -18,11 +18,11 @@ namespace SnapSaves.Helpers
         }
 
         public async Task<(bool Success, string ErrorMessage)> CreateUserAsync(
-            string email,
-            string password,
-            string firstName,
-            string lastName,
-            string role)
+    string email,
+    string password,
+    string firstName,
+    string lastName,
+    string role)
         {
             try
             {
@@ -43,8 +43,7 @@ namespace SnapSaves.Helpers
                     FirstName = firstName,
                     LastName = lastName,
                     MongoUserId = mongoUser.Id, // Use the MongoDB ID
-                    CreatedAt = DateTime.UtcNow,
-                    Role = role
+                    CreatedAt = DateTime.UtcNow
                 };
 
                 var result = await _userManager.CreateAsync(appUser, password);
@@ -55,15 +54,20 @@ namespace SnapSaves.Helpers
                     return (false, string.Join(", ", result.Errors.Select(e => e.Description)));
                 }
 
-                // Step 3: Assign role to the user
-                await _userManager.AddToRoleAsync(appUser, role);
+                // Step 3: Assign role to the user using UserManager
+                var roleResult = await _userManager.AddToRoleAsync(appUser, role);
+                if (!roleResult.Succeeded)
+                {
+                    return (false, string.Join(", ", roleResult.Errors.Select(e => e.Description)));
+                }
 
-                return (true, null);
+                return (true, string.Empty); // Updated to avoid nullability issues
             }
             catch (Exception ex)
             {
                 return (false, ex.Message);
             }
         }
+
     }
 }

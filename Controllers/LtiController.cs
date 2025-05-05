@@ -75,8 +75,7 @@ namespace SnapSaves.Controllers
                     FirstName = "DefaultFirstName",
                     LastName = "DefaultLastName",
                     MongoUserId = ObjectId.GenerateNewId().ToString(), 
-                    CreatedAt = DateTime.UtcNow,
-                    Role = userRole
+                    CreatedAt = DateTime.UtcNow
                 };
 
 
@@ -106,14 +105,13 @@ namespace SnapSaves.Controllers
             else
             {
                 // Handle pre-existing users without a role
-                if (string.IsNullOrEmpty(identityUser.Role))
+                var roles = await _userManager.GetRolesAsync(identityUser);
+                if (!roles.Any())
                 {
-                    identityUser.Role = userRole; // Assign the role based on the LTI request
-                    var updateResult = await _userManager.UpdateAsync(identityUser);
-
-                    if (!updateResult.Succeeded)
+                    var roleResult = await _userManager.AddToRoleAsync(identityUser, userRole);
+                    if (!roleResult.Succeeded)
                     {
-                        return BadRequest("Failed to update user role.");
+                        return BadRequest("Failed to assign role.");
                     }
                 }
             }
