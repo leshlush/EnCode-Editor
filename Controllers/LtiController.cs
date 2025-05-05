@@ -85,11 +85,16 @@ namespace SnapSaves.Controllers
 
         private async Task<AppUser> GetOrCreateUserAsync(LtiRequest ltiRequest, string userRole)
         {
-            var identityUser = await _userManager.FindByNameAsync(ltiRequest.UserId);
+            string toolConsumerInstanceGuid = ltiRequest.Parameters.FirstOrDefault(p => p.Key == "tool_consumer_instance_guid").Value;
+
+            string userId = ltiRequest.UserId;
+            string uniqueUserId = $"{toolConsumerInstanceGuid}:{userId}";
+
+            var identityUser = await _userManager.FindByNameAsync(uniqueUserId);
 
             if (identityUser == null)
             {
-                identityUser = await CreateUserAsync(ltiRequest, userRole);
+                identityUser = await CreateUserAsync(ltiRequest, userRole, uniqueUserId);
             }
             else
             {
@@ -99,7 +104,8 @@ namespace SnapSaves.Controllers
             return identityUser;
         }
 
-        private async Task<AppUser> CreateUserAsync(LtiRequest ltiRequest, string userRole)
+
+        private async Task<AppUser> CreateUserAsync(LtiRequest ltiRequest, string userRole, string username)
         {
             // Get or create the organization
             var organization = await GetOrCreateOrganization(ltiRequest);
@@ -107,13 +113,13 @@ namespace SnapSaves.Controllers
             // Create the new user and assign them to the organization
             var newUser = new AppUser
             {
-                UserName = ltiRequest.UserId,
+                UserName = username,
                 Email = $"{ltiRequest.UserId}@example.com",
                 FirstName = "DefaultFirstName",
                 LastName = "DefaultLastName",
                 MongoUserId = ObjectId.GenerateNewId().ToString(),
                 CreatedAt = DateTime.UtcNow,
-                OrganizationId = organization.Id // Assign the user to the organization
+                OrganizationId = organization.Id
             };
 
             var result = await _userManager.CreateAsync(newUser);
@@ -128,6 +134,7 @@ namespace SnapSaves.Controllers
 
             return newUser;
         }
+
 
         private async Task<Organization> GetOrCreateOrganization(LtiRequest ltiRequest)
         {
