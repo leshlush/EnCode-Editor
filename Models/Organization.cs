@@ -7,6 +7,7 @@ namespace SnapSaves.Models
         public int Id { get; set; } // Primary key
         public string Name { get; set; } = string.Empty; // Organization name
         public string Description { get; set; } = string.Empty; // Organization description
+        public string ToolConsumerInstanceGuid { get; set; } = string.Empty; // Unique identifier for the tool consumer
 
         // Navigation properties
         public ICollection<Course> Courses { get; set; } = new List<Course>(); // One-to-Many with Courses

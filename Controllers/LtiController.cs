@@ -139,16 +139,17 @@ namespace SnapSaves.Controllers
         private async Task<Organization> GetOrCreateOrganization(LtiRequest ltiRequest)
         {
             string organizationName = ltiRequest.Parameters.FirstOrDefault(p => p.Key == "organization_name").Value ?? "Default Organization";
-
             string organizationDescription = ltiRequest.Parameters.FirstOrDefault(p => p.Key == "organization_description").Value ?? "Default Description";
+            string toolConsumerInstanceGuid = ltiRequest.Parameters.FirstOrDefault(p => p.Key == "tool_consumer_instance_guid").Value;
 
-            // Try to get the organization
-            var organization = GetOrganization(organizationName);
+            // Check for an existing organization with the same name and ToolConsumerInstanceGuid
+            var organization = _context.Organizations
+                .FirstOrDefault(o => o.Name == organizationName && o.ToolConsumerInstanceGuid == toolConsumerInstanceGuid);
 
             // If not found, create a new one
             if (organization == null)
             {
-                organization = await CreateOrganization(organizationName, organizationDescription);
+                organization = await CreateOrganization(organizationName, organizationDescription, toolConsumerInstanceGuid);
             }
 
             return organization;
@@ -159,12 +160,13 @@ namespace SnapSaves.Controllers
             return _context.Organizations.FirstOrDefault(o => o.Name == organizationName);
         }
 
-        private async Task<Organization> CreateOrganization(string name, string description)
+        private async Task<Organization> CreateOrganization(string name, string description, string toolConsumerInstanceGuid)
         {
             var organization = new Organization
             {
                 Name = name,
                 Description = description,
+                ToolConsumerInstanceGuid = toolConsumerInstanceGuid
             };
 
             _context.Organizations.Add(organization);
