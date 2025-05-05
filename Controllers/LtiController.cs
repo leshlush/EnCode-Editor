@@ -14,28 +14,43 @@ namespace SnapSaves.Controllers
         private readonly AppIdentityDbContext _context;
         private readonly UserManager<AppUser> _userManager;
         private readonly SignInManager<AppUser> _signInManager;
-        private readonly MongoDbContext _mongoDb; // Add MongoDbContext
+        private readonly MongoDbContext _mongoDb;
 
         public LtiController(
             AppIdentityDbContext context,
             UserManager<AppUser> userManager,
             SignInManager<AppUser> signInManager,
-            MongoDbContext mongoDb) // Inject MongoDbContext
+            MongoDbContext mongoDb)
         {
             _context = context;
             _userManager = userManager;
             _signInManager = signInManager;
-            _mongoDb = mongoDb; // Assign MongoDbContext
+            _mongoDb = mongoDb;
         }
 
         [HttpPost]
-        [HttpPost]
         public async Task<IActionResult> Launch()
         {
-            // Read the form data from the HTTP request
+            // Parse the LTI request
+            var ltiRequest = await ParseLtiRequestAsync();
+
+            // Determine the user's role
+            string userRole = DetermineUserRole(ltiRequest);
+
+            // Check if the user exists or create a new one
+            var identityUser = await GetOrCreateUserAsync(ltiRequest, userRole);
+
+            // Log the user in
+            await _signInManager.SignInAsync(identityUser, isPersistent: false);
+
+            // Return the LTI launch view
+            return View("LtiLaunch", ltiRequest);
+        }
+
+        private async Task<LtiRequest> ParseLtiRequestAsync()
+        {
             var form = await HttpContext.Request.ReadFormAsync();
 
-            // Create and initialize the LtiRequest object
             var ltiRequest = new LtiRequest
             {
                 ConsumerKey = form["oauth_consumer_key"],
@@ -48,80 +63,140 @@ namespace SnapSaves.Controllers
                 ltiRequest.AddParameter(kvp.Key, kvp.Value);
             }
 
-            // Determine the user's role based on the LTI request
-            string userRole = "Student"; // Default to "Student"
+            return ltiRequest;
+        }
+
+        private string DetermineUserRole(LtiRequest ltiRequest)
+        {
             if (!string.IsNullOrEmpty(ltiRequest.Roles))
             {
                 if (ltiRequest.Roles.Contains("Instructor", StringComparison.OrdinalIgnoreCase))
                 {
-                    userRole = "Teacher";
+                    return "Teacher";
                 }
                 else if (ltiRequest.Roles.Contains("Learner", StringComparison.OrdinalIgnoreCase))
                 {
-                    userRole = "Student";
+                    return "Student";
                 }
             }
 
-            // Check if the user exists in the AspNetUsers table
+            return "Student"; // Default to "Student"
+        }
+
+        private async Task<AppUser> GetOrCreateUserAsync(LtiRequest ltiRequest, string userRole)
+        {
             var identityUser = await _userManager.FindByNameAsync(ltiRequest.UserId);
 
             if (identityUser == null)
             {
-                // Step 1: Create a new user
-                identityUser = new AppUser
-                {
-                    UserName = ltiRequest.UserId,
-                    Email = $"{ltiRequest.UserId}@example.com",
-                    FirstName = "DefaultFirstName",
-                    LastName = "DefaultLastName",
-                    MongoUserId = ObjectId.GenerateNewId().ToString(), 
-                    CreatedAt = DateTime.UtcNow
-                };
-
-
-
-                var result = await _userManager.CreateAsync(identityUser);
-
-                if (!result.Succeeded)
-                {
-                    return BadRequest("Failed to create user.");
-                }
-
-                // Assign the user to the appropriate role
-                await _userManager.AddToRoleAsync(identityUser, userRole);
-
-                // Step 2: Assign the user to a course
-                var course = _context.Courses.FirstOrDefault(c => c.Name == "Math 101");
-                if (course != null)
-                {
-                    _context.UserCourses.Add(new UserCourse
-                    {
-                        UserId = identityUser.Id,
-                        CourseId = course.Id
-                    });
-                    await _context.SaveChangesAsync();
-                }
+                identityUser = await CreateUserAsync(ltiRequest, userRole);
             }
             else
             {
-                // Handle pre-existing users without a role
-                var roles = await _userManager.GetRolesAsync(identityUser);
-                if (!roles.Any())
-                {
-                    var roleResult = await _userManager.AddToRoleAsync(identityUser, userRole);
-                    if (!roleResult.Succeeded)
-                    {
-                        return BadRequest("Failed to assign role.");
-                    }
-                }
+                await EnsureUserHasRoleAsync(identityUser, userRole);
             }
 
-            // Log the user in
-            await _signInManager.SignInAsync(identityUser, isPersistent: false);
+            return identityUser;
+        }
 
-            return View("LtiLaunch", ltiRequest);
+        private async Task<AppUser> CreateUserAsync(LtiRequest ltiRequest, string userRole)
+        {
+            // Get or create the organization
+            var organization = await GetOrCreateOrganization(ltiRequest);
+
+            // Create the new user and assign them to the organization
+            var newUser = new AppUser
+            {
+                UserName = ltiRequest.UserId,
+                Email = $"{ltiRequest.UserId}@example.com",
+                FirstName = "DefaultFirstName",
+                LastName = "DefaultLastName",
+                MongoUserId = ObjectId.GenerateNewId().ToString(),
+                CreatedAt = DateTime.UtcNow,
+                OrganizationId = organization.Id // Assign the user to the organization
+            };
+
+            var result = await _userManager.CreateAsync(newUser);
+
+            if (!result.Succeeded)
+            {
+                throw new InvalidOperationException("Failed to create user.");
+            }
+
+            await _userManager.AddToRoleAsync(newUser, userRole);
+            await AssignUserToDefaultCourseAsync(newUser);
+
+            return newUser;
+        }
+
+        private async Task<Organization> GetOrCreateOrganization(LtiRequest ltiRequest)
+        {
+            string organizationName = ltiRequest.Parameters.FirstOrDefault(p => p.Key == "organization_name").Value ?? "Default Organization";
+
+            string organizationDescription = ltiRequest.Parameters.FirstOrDefault(p => p.Key == "organization_description").Value ?? "Default Description";
+
+            // Try to get the organization
+            var organization = GetOrganization(organizationName);
+
+            // If not found, create a new one
+            if (organization == null)
+            {
+                organization = await CreateOrganization(organizationName, organizationDescription);
+            }
+
+            return organization;
+        }
+
+        private Organization GetOrganization(string organizationName)
+        {
+            return _context.Organizations.FirstOrDefault(o => o.Name == organizationName);
+        }
+
+        private async Task<Organization> CreateOrganization(string name, string description)
+        {
+            var organization = new Organization
+            {
+                Name = name,
+                Description = description,
+            };
+
+            _context.Organizations.Add(organization);
+            await _context.SaveChangesAsync();
+
+            return organization;
         }
 
 
+
+        private async Task EnsureUserHasRoleAsync(AppUser user, string userRole)
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+
+            if (!roles.Any())
+            {
+                var result = await _userManager.AddToRoleAsync(user, userRole);
+
+                if (!result.Succeeded)
+                {
+                    throw new InvalidOperationException("Failed to assign role.");
+                }
+            }
+        }
+
+        private async Task AssignUserToDefaultCourseAsync(AppUser user)
+        {
+            var course = _context.Courses.FirstOrDefault(c => c.Name == "Math 101");
+
+            if (course != null)
+            {
+                _context.UserCourses.Add(new UserCourse
+                {
+                    UserId = user.Id,
+                    CourseId = course.Id
+                });
+
+                await _context.SaveChangesAsync();
+            }
+        }
     }
 }
