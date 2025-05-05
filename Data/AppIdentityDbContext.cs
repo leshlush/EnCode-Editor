@@ -11,17 +11,43 @@ namespace SnapSaves.Data
         public AppIdentityDbContext(DbContextOptions<AppIdentityDbContext> options)
             : base(options) { }
 
-        public DbSet<LtiUser> LtiUsers { get; set; } // Keep LtiUsers DbSet
-        public DbSet<Course> Courses { get; set; } // Add Courses DbSet
-        public DbSet<UserCourse> UserCourses { get; set; } // Add UserCourse DbSet
-        public DbSet<CourseTemplate> CourseTemplates {  get; set; } // Add CourseTemplates DbSet
-        public DbSet<Template> Templates { get; set; } // Add Templates DbSet
+        public DbSet<LtiUser> LtiUsers { get; set; } 
+        public DbSet<Course> Courses { get; set; }
+        public DbSet<UserCourse> UserCourses { get; set; } 
+        public DbSet<CourseTemplate> CourseTemplates {  get; set; } 
+        public DbSet<Template> Templates { get; set; } 
         public DbSet<Permission> Permissions { get; set; }
+        public DbSet<Organization> Organizations { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            // Configure Organization relationships
+            builder.Entity<Organization>()
+                .HasMany(o => o.Courses)
+                .WithOne(c => c.Organization)
+                .HasForeignKey(c => c.OrganizationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Organization>()
+                .HasMany(o => o.Users)
+                .WithOne(u => u.Organization)
+                .HasForeignKey(u => u.OrganizationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure Course relationships
+            builder.Entity<Course>()
+                .HasOne(c => c.Organization)
+                .WithMany(o => o.Courses)
+                .HasForeignKey(c => c.OrganizationId);
+
+            // Configure AppUser relationships
+            builder.Entity<AppUser>()
+                .HasOne(u => u.Organization)
+                .WithMany(o => o.Users)
+                .HasForeignKey(u => u.OrganizationId);
 
             // Configure RolePermission relationships
             builder.Entity<RolePermission>()

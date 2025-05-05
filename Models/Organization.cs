@@ -1,0 +1,15 @@
+﻿using SnapSaves.Auth;
+
+namespace SnapSaves.Models
+{
+    public class Organization
+    {
+        public int Id { get; set; } // Primary key
+        public string Name { get; set; } = string.Empty; // Organization name
+        public string Description { get; set; } = string.Empty; // Organization description
+
+        // Navigation properties
+        public ICollection<Course> Courses { get; set; } = new List<Course>(); // One-to-Many with Courses
+        public ICollection<AppUser> Users { get; set; } = new List<AppUser>(); // One-to-Many with AppUsers
+    }
+}
