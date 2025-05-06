@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using SnapSaves.Data;
@@ -54,54 +55,42 @@ namespace SnapSaves.Controllers
 
 
 
-        [HttpGet]
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> Create()
         {
-            if (User.Identity?.IsAuthenticated == true)
+            foreach (var claim in User.Claims)
             {
-                var userId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
-
-                foreach (var claim in User.Claims)
-                {
-                    Console.WriteLine($"Claim Type: {claim.Type}, Claim Value: {claim.Value}");
-                }
-
-                if (!User.Identity?.IsAuthenticated ?? false)
-                {
-                    Console.WriteLine("User is not authenticated");
-                    return Unauthorized();
-                }
-
-                if (!string.IsNullOrEmpty(userId))
-                {
-                    // Create a new project
-                    var newProject = new Project
-                    {
-                        Name = "New Project " + DateTime.UtcNow.ToString("yyyyMMddHHmmss"),
-                        UserId = userId,
-                        CreatedAt = DateTime.UtcNow,
-                        LastModified = DateTime.UtcNow,
-                        Files = new List<ProjectFile>
-                {
-                    new ProjectFile
-                    {
-                        Path = "default.txt",
-                        Content = "This is a default file.",
-                        IsDirectory = false
-                    }
-                }
-                    };
-
-                    // Insert the new project into the database
-                    await _dbContext.Projects.InsertOneAsync(newProject);
-
-                    // Redirect back to the Projects page
-                    return RedirectToAction(nameof(Index));
-                }
+                Console.WriteLine($"Claim Type: {claim.Type}, Claim Value: {claim.Value}");
             }
 
-            return Unauthorized();
+
+            var userId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized("MongoUserId claim is missing");
+            }
+
+            var newProject = new Project
+            {
+                Name = "New Project " + DateTime.UtcNow.ToString("yyyyMMddHHmmss"),
+                UserId = userId,
+                CreatedAt = DateTime.UtcNow,
+                LastModified = DateTime.UtcNow,
+                Files = new List<ProjectFile>
+        {
+            new ProjectFile
+            {
+                Path = "default.txt",
+                Content = "This is a default file.",
+                IsDirectory = false
+            }
+        }
+            };
+
+            await _dbContext.Projects.InsertOneAsync(newProject);
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]

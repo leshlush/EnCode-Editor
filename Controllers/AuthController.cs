@@ -144,14 +144,16 @@ namespace SnapSaves.Controllers
 
                 if (result.Succeeded)
                 {
-                    // Add MongoUserId claim
-                    var claims = new List<Claim>
-                     {
-                          new Claim("MongoUserId", user.MongoUserId) // Add the MongoUserId claim
-                     };
+                    // Add MongoUserId claim to the user's claims
+                    var userPrincipal = await _signInManager.CreateUserPrincipalAsync(user);
+                    var identity = (ClaimsIdentity)userPrincipal.Identity;
 
-                    var identity = new ClaimsIdentity(claims, "Custom");
-                    await HttpContext.SignInAsync(new ClaimsPrincipal(identity));
+                    if (!identity.HasClaim(c => c.Type == "MongoUserId"))
+                    {
+                        identity.AddClaim(new Claim("MongoUserId", user.MongoUserId));
+                    }
+
+                    await HttpContext.SignInAsync(userPrincipal);
 
                     _logger.LogInformation("User logged in");
                     return LocalRedirect(returnUrl);
@@ -167,6 +169,7 @@ namespace SnapSaves.Controllers
                 return View(model);
             }
         }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]

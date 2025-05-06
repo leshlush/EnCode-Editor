@@ -47,6 +47,7 @@ builder.Services.AddScoped<TemplateHelper>();
 builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<UserHelper>();
 builder.Services.AddScoped<PermissionHelper>();
+builder.Services.AddScoped<IUserClaimsPrincipalFactory<AppUser>, CustomUserClaimsPrincipalFactory>();
 
 
 var app = builder.Build();
