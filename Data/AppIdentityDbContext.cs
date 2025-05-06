@@ -24,6 +24,30 @@ namespace SnapSaves.Data
         {
             base.OnModelCreating(builder);
 
+            // Configure Template
+            builder.Entity<Template>(entity =>
+            {
+                entity.Property(t => t.MongoId).IsRequired().HasMaxLength(255);
+                entity.Property(t => t.Name).IsRequired();
+                entity.Property(t => t.Description).IsRequired();
+            });
+
+            // Configure CourseTemplate
+            builder.Entity<CourseTemplate>(entity =>
+            {
+                entity.HasKey(ct => new { ct.CourseId, ct.TemplateId });
+
+                entity.HasOne(ct => ct.Course)
+                    .WithMany(c => c.CourseTemplates)
+                    .HasForeignKey(ct => ct.CourseId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(ct => ct.Template)
+                    .WithMany(t => t.CourseTemplates)
+                    .HasForeignKey(ct => ct.TemplateId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
             // Configure Organization relationships
             builder.Entity<Organization>()
                 .HasMany(o => o.Courses)

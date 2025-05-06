@@ -1,0 +1,28 @@
+﻿@model List<SnapSaves.Controllers.RolePermissionsViewModel>
+
+<h1>Role Permissions</h1>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Role</th>
+            <th>Permissions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var role in Model)
+        {
+            <tr>
+                <td>@role.RoleName</td>
+                <td>
+                    <ul>
+                        @foreach (var permission in role.Permissions)
+                        {
+                            <li>@permission</li>
+                        }
+                    </ul>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

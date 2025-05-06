@@ -34,21 +34,44 @@ namespace SnapSaves.Helpers
             // Apply migrations
             await _context.Database.MigrateAsync();
 
-            // Seed roles
+            // Seed the default organization
+            var defaultOrganization = await SeedDefaultOrganizationAsync();
+
+            // Seed roles and permissions
             await SeedRolesAsync();
 
             // Seed courses
-            var courses = await SeedCoursesAsync();
+            var courses = await SeedCoursesAsync(defaultOrganization);
 
             // Seed teacher
-            await SeedTeacherAsync(courses);
+            await SeedTeacherAsync(defaultOrganization, courses);
 
             // Seed students
-            await SeedStudentsAsync(courses);
+           await SeedStudentsAsync(defaultOrganization, courses);
 
             // Seed templates
             await SeedTemplatesAsync(courses);
         }
+
+        private async Task<Organization> SeedDefaultOrganizationAsync()
+        {
+            var organization = await _context.Organizations.FirstOrDefaultAsync(o => o.Name == "Default Organization");
+            if (organization == null)
+            {
+                organization = new Organization
+                {
+                    Name = "Default Organization",
+                    Description = "This is the default organization."
+                };
+
+                _context.Organizations.Add(organization);
+                await _context.SaveChangesAsync();
+            }
+
+            return organization;
+        }
+
+
 
         private async Task SeedRolesAsync()
         {
@@ -115,14 +138,14 @@ namespace SnapSaves.Helpers
         }
 
 
-        private async Task<List<Course>> SeedCoursesAsync()
+        private async Task<List<Course>> SeedCoursesAsync(Organization defaultOrganization)
         {
             var courses = new List<Course>
-            {
-                new Course { Name = "Course 1", Description = "Description for Course 1" },
-                new Course { Name = "Course 2", Description = "Description for Course 2" },
-                new Course { Name = "Course 3", Description = "Description for Course 3" }
-            };
+    {
+        new Course { Name = "Course 1", Description = "Description for Course 1", OrganizationId = defaultOrganization.Id },
+        new Course { Name = "Course 2", Description = "Description for Course 2", OrganizationId = defaultOrganization.Id },
+        new Course { Name = "Course 3", Description = "Description for Course 3", OrganizationId = defaultOrganization.Id }
+    };
 
             foreach (var course in courses)
             {
@@ -136,17 +159,19 @@ namespace SnapSaves.Helpers
             return await _context.Courses.ToListAsync();
         }
 
-        private async Task SeedTeacherAsync(List<Course> courses)
+        private async Task SeedTeacherAsync(Organization defaultOrganization, List<Course> courses)
         {
             var teacherEmail = "teacher@encodecreate.com";
             var teacherPassword = "Terrap1n";
 
+            // Pass the OrganizationId to the UserHelper
             var (teacherSuccess, teacherError) = await _userHelper.CreateUserAsync(
                 teacherEmail,
                 teacherPassword,
                 "Teacher",
                 "EncodeCreate",
-                "Teacher"
+                "Teacher",
+                defaultOrganization.Id // Pass the OrganizationId here
             );
 
             if (!teacherSuccess)
@@ -156,6 +181,12 @@ namespace SnapSaves.Helpers
             }
 
             var teacher = await _userManager.FindByEmailAsync(teacherEmail);
+            if (teacher == null)
+            {
+                Console.WriteLine("Teacher user not found after creation.");
+                return;
+            }
+
             foreach (var course in courses)
             {
                 if (!_context.UserCourses.Any(uc => uc.UserId == teacher.Id && uc.CourseId == course.Id))
@@ -170,19 +201,23 @@ namespace SnapSaves.Helpers
             await _context.SaveChangesAsync();
         }
 
-        private async Task SeedStudentsAsync(List<Course> courses)
+
+
+        private async Task SeedStudentsAsync(Organization defaultOrganization, List<Course> courses)
         {
             for (int i = 1; i <= 15; i++)
             {
                 var studentEmail = $"student{i}@encodecreate.com";
                 var studentPassword = $"Password{i}!";
 
+                // Pass the OrganizationId to the UserHelper
                 var (studentSuccess, studentError) = await _userHelper.CreateUserAsync(
                     studentEmail,
                     studentPassword,
                     $"Student{i}",
                     "EncodeCreate",
-                    "Student"
+                    "Student",
+                    defaultOrganization.Id // Pass the OrganizationId here
                 );
 
                 if (!studentSuccess)
@@ -192,6 +227,12 @@ namespace SnapSaves.Helpers
                 }
 
                 var student = await _userManager.FindByEmailAsync(studentEmail);
+                if (student == null)
+                {
+                    Console.WriteLine($"Student {i} not found after creation.");
+                    continue;
+                }
+
                 var courseIndex = (i - 1) / 5; // 0 for Course 1, 1 for Course 2, 2 for Course 3
                 var course = courses[courseIndex];
 

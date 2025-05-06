@@ -85,10 +85,10 @@ namespace SnapSaves.Helpers
         }
 
         public async Task<(bool Success, string ErrorMessage)> CreateTemplateFromProjectAsync(
-            string projectId,
-            int courseId,
-            IClientSessionHandle? session,
-            bool isReplicaSet)
+     string projectId,
+     int courseId,
+     IClientSessionHandle? session,
+     bool isReplicaSet)
         {
             try
             {
@@ -156,6 +156,7 @@ namespace SnapSaves.Helpers
                 return (false, ex.Message);
             }
         }
+
 
         public async Task<(bool Success, string ErrorMessage)> CreateTemplateFromProjectAsync(string projectId, int courseId)
         {

@@ -45,23 +45,69 @@ namespace SnapSaves.Controllers
                 return View(model);
             }
 
-            var userHelper = new UserHelper(_mongoDb, _userManager);
-            var (success, errorMessage) = await userHelper.CreateUserAsync(
-                model.Email,
-                model.Password,
-                model.FirstName,
-                model.LastName,
-                "Student"
-            );
-
-            if (!success)
+            try
             {
-                ModelState.AddModelError(string.Empty, errorMessage);
+                // Step 1: Create the user in MongoDB
+                var mongoUser = new User
+                {
+                    Username = model.Email,
+                    Email = model.Email,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _mongoDb.Users.InsertOneAsync(mongoUser);
+
+                // Step 2: Retrieve the default organization from MySQL
+                var defaultOrganization = await _userManager.Users
+                    .Select(u => u.Organization)
+                    .FirstOrDefaultAsync(o => o.Name == "Default Organization");
+
+                if (defaultOrganization == null)
+                {
+                    ModelState.AddModelError(string.Empty, "Default organization not found.");
+                    return View(model);
+                }
+
+                // Step 3: Create the user in MySQL with the MongoUserId and OrganizationId
+                var appUser = new AppUser
+                {
+                    UserName = model.Email,
+                    Email = model.Email,
+                    FirstName = model.FirstName,
+                    LastName = model.LastName,
+                    MongoUserId = mongoUser.Id, // Use the MongoDB ID
+                    CreatedAt = DateTime.UtcNow,
+                    OrganizationId = defaultOrganization.Id // Use the OrganizationId
+                };
+
+                var result = await _userManager.CreateAsync(appUser, model.Password);
+
+                if (!result.Succeeded)
+                {
+                    // Rollback MongoDB user if MySQL user creation fails
+                    await _mongoDb.Users.DeleteOneAsync(u => u.Id == mongoUser.Id);
+                    ModelState.AddModelError(string.Empty, string.Join(", ", result.Errors.Select(e => e.Description)));
+                    return View(model);
+                }
+
+                // Step 4: Assign the user to the "Student" role
+                var roleResult = await _userManager.AddToRoleAsync(appUser, "Student");
+                if (!roleResult.Succeeded)
+                {
+                    ModelState.AddModelError(string.Empty, string.Join(", ", roleResult.Errors.Select(e => e.Description)));
+                    return View(model);
+                }
+
+                return RedirectToAction("Index", "Home");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during registration");
+                ModelState.AddModelError(string.Empty, "An error occurred during registration.");
                 return View(model);
             }
-
-            return RedirectToAction("Index", "Home");
         }
+
 
 
         [HttpGet]
