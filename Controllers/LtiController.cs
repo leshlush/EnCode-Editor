@@ -138,9 +138,15 @@ namespace SnapSaves.Controllers
 
         private async Task<Organization> GetOrCreateOrganization(LtiRequest ltiRequest)
         {
-            string organizationName = ltiRequest.Parameters.FirstOrDefault(p => p.Key == "organization_name").Value ?? "Default Organization";
-            string organizationDescription = ltiRequest.Parameters.FirstOrDefault(p => p.Key == "organization_description").Value ?? "Default Description";
+            // Extract the required parameters from the LTI request
             string toolConsumerInstanceGuid = ltiRequest.Parameters.FirstOrDefault(p => p.Key == "tool_consumer_instance_guid").Value;
+            string toolConsumerInstanceName = ltiRequest.Parameters.FirstOrDefault(p => p.Key == "tool_consumer_instance_name").Value;
+
+            // Generate the organization name by combining the GUID and name
+            string organizationName = $"{toolConsumerInstanceName} ({toolConsumerInstanceGuid})";
+
+            // Use a default description if none is provided
+            string organizationDescription = ltiRequest.Parameters.FirstOrDefault(p => p.Key == "organization_description").Value ?? "Default Description";
 
             // Check for an existing organization with the same name and ToolConsumerInstanceGuid
             var organization = _context.Organizations
@@ -154,6 +160,7 @@ namespace SnapSaves.Controllers
 
             return organization;
         }
+
 
         private Organization GetOrganization(string organizationName)
         {
