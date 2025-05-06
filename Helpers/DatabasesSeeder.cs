@@ -83,13 +83,22 @@ namespace SnapSaves.Helpers
             {
                 await _roleManager.CreateAsync(new IdentityRole("Student"));
             }
+            if (!await _roleManager.RoleExistsAsync("Admin"))
+            {
+                await _roleManager.CreateAsync(new IdentityRole("Admin"));
+            }
+            if (!await _roleManager.RoleExistsAsync("Manager"))
+            {
+                await _roleManager.CreateAsync(new IdentityRole("Manager"));
+            }
 
             // Seed permissions
             var permissions = new List<Permission>
     {
         new Permission { Name = "ViewCourses" },
         new Permission { Name = "EditCourses" },
-        new Permission { Name = "ViewStudents" }
+        new Permission { Name = "ViewStudents" },
+        new Permission { Name = "ViewTeachers" }
     };
 
             foreach (var permission in permissions)
@@ -104,9 +113,11 @@ namespace SnapSaves.Helpers
             // Assign permissions to roles
             var teacherRole = await _roleManager.FindByNameAsync("Teacher");
             var studentRole = await _roleManager.FindByNameAsync("Student");
+            var managerRole = await _roleManager.FindByNameAsync("Manager"); 
 
             var teacherPermissions = new[] { "ViewCourses", "EditCourses", "ViewStudents" };
             var studentPermissions = new[] { "ViewCourses" };
+            var managerPermissions = new[] { "ViewCourses", "EditCourses", "ViewStudents", "ViewTeachers" };
 
             foreach (var permissionName in teacherPermissions)
             {
