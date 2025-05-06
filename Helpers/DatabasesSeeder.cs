@@ -40,6 +40,9 @@ namespace SnapSaves.Helpers
             // Seed roles and permissions
             await SeedRolesAsync();
 
+            // Seed admin user
+            await SeedAdminAsync(defaultOrganization);
+
             // Seed courses
             var courses = await SeedCoursesAsync(defaultOrganization);
 
@@ -147,6 +150,44 @@ namespace SnapSaves.Helpers
 
             await _context.SaveChangesAsync();
         }
+
+        private async Task SeedAdminAsync(Organization defaultOrganization)
+        {
+            var adminEmail = "admin@encodecreate.com";
+            var adminPassword = "Admin123!";
+
+            // Check if the admin user already exists
+            var adminUser = await _userManager.FindByEmailAsync(adminEmail);
+            if (adminUser == null)
+            {
+                // Create the admin user
+                adminUser = new AppUser
+                {
+                    UserName = adminEmail,
+                    Email = adminEmail,
+                    FirstName = "Admin",
+                    LastName = "User",
+                    MongoUserId = ObjectId.GenerateNewId().ToString(),
+                    CreatedAt = DateTime.UtcNow,
+                    OrganizationId = defaultOrganization.Id
+                };
+
+                var result = await _userManager.CreateAsync(adminUser, adminPassword);
+                if (!result.Succeeded)
+                {
+                    Console.WriteLine($"Failed to create admin user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                    return;
+                }
+
+                // Assign the "Admin" role to the user
+                var roleResult = await _userManager.AddToRoleAsync(adminUser, "Admin");
+                if (!roleResult.Succeeded)
+                {
+                    Console.WriteLine($"Failed to assign Admin role: {string.Join(", ", roleResult.Errors.Select(e => e.Description))}");
+                }
+            }
+        }
+
 
 
         private async Task<List<Course>> SeedCoursesAsync(Organization defaultOrganization)

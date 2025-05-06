@@ -1,0 +1,48 @@
+﻿@model SnapSaves.Controllers.AdminViewModel
+
+<h1>Admin Dashboard</h1>
+
+<h2>Roles and Permissions</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Role</th>
+            <th>Permissions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var role in Model.Roles)
+        {
+            <tr>
+                <td>@role.RoleName</td>
+                <td>
+                    <ul>
+                        @foreach (var permission in role.Permissions)
+                        {
+                            <li>@permission</li>
+                        }
+                    </ul>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<h2>Organizations</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var organization in Model.Organizations)
+        {
+            <tr>
+                <td>@organization.Name</td>
+                <td>@organization.Description</td>
+            </tr>
+        }
+    </tbody>
+</table>

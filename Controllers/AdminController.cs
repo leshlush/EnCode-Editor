@@ -8,12 +8,12 @@ using SnapSaves.Models;
 namespace SnapSaves.Controllers
 {
     [Authorize(Roles = "Admin")] // Restrict access to Admin role
-    public class RolePermissionsController : Controller
+    public class AdminController : Controller
     {
         private readonly AppIdentityDbContext _context;
         private readonly RoleManager<IdentityRole> _roleManager;
 
-        public RolePermissionsController(AppIdentityDbContext context, RoleManager<IdentityRole> roleManager)
+        public AdminController(AppIdentityDbContext context, RoleManager<IdentityRole> roleManager)
         {
             _context = context;
             _roleManager = roleManager;
@@ -28,8 +28,11 @@ namespace SnapSaves.Controllers
                 .Include(rp => rp.Permission)
                 .ToListAsync();
 
+            // Fetch all organizations
+            var organizations = await _context.Organizations.ToListAsync();
+
             // Group permissions by role
-            var viewModel = roles.Select(role => new RolePermissionsViewModel
+            var rolePermissionsViewModel = roles.Select(role => new RolePermissionsViewModel
             {
                 RoleName = role.Name,
                 Permissions = rolePermissions
@@ -38,8 +41,21 @@ namespace SnapSaves.Controllers
                     .ToList()
             }).ToList();
 
+            // Create the view model
+            var viewModel = new AdminViewModel
+            {
+                Roles = rolePermissionsViewModel,
+                Organizations = organizations
+            };
+
             return View(viewModel);
         }
+    }
+
+    public class AdminViewModel
+    {
+        public List<RolePermissionsViewModel> Roles { get; set; }
+        public List<Organization> Organizations { get; set; }
     }
 
     public class RolePermissionsViewModel
