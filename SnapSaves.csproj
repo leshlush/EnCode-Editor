@@ -11,6 +11,12 @@
     <Content Remove="wwwroot\Assets\index.html" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="wwwroot\Jdk\CJDom-2025.05.jar" />
+    <None Include="wwwroot\Jdk\Greenfoot-2025.05.jar" />
+    <None Include="wwwroot\Jdk\SnapBuilder-2025.05.jar" />
+    <None Include="wwwroot\Jdk\SnapCJ-2025.05.jar" />
+    <None Include="wwwroot\Jdk\SnapCode-2025.05.jar" />
+    <None Include="wwwroot\Jdk\SnapKit-2025.05.jar" />
     <None Include="wwwroot\SnapCodeAll-2025.04.jar" />
   </ItemGroup>
   <ItemGroup>
