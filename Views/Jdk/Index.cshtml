@@ -1,8 +1,9 @@
 ﻿@{
+    Layout = null;
     ViewData["Title"] = "CheerpJ Test";
 }
 
-<h1>CheerpJ Test</h1>
+<h1>Loading Coding Environment...</h1>
 <div id="cheerpj-container" style="position: relative; height: 600px; width: 800px; margin: 0 auto; border: 1px solid #ccc;"></div>
 
 <script src="https://cjrtnc.leaningtech.com/4.0/loader.js"></script>
@@ -26,8 +27,7 @@
 
             // Create the display inside the container
             const container = document.getElementById("cheerpj-container");
-            cheerpjCreateDisplay(800, 600, container); // Scope the display to the container
-
+            
             console.log("Running main class...");
             await cheerpjRunMain("snapcode.app.App", classPath);
             console.log("Main class executed successfully.");
