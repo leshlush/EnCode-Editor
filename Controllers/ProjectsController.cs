@@ -139,7 +139,6 @@ namespace SnapSaves.Controllers
 
 
         [HttpGet]
-        [HttpGet]
         public async Task<IActionResult> Details(string id)
         {
             if (!User.Identity?.IsAuthenticated ?? false)

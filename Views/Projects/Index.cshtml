@@ -1,56 +1,81 @@
 ﻿@model List<SnapSaves.Models.Project>
-@{
-    var templates = ViewData["Templates"] as List<SnapSaves.Models.Project>;
-}
 
-<h1>My Projects</h1>
-
-<form asp-controller="Projects" asp-action="Create" method="post" class="mb-3">
-    <button type="submit" class="btn btn-primary">Create New Project</button>
-</form>
+<h1>Your Projects</h1>
 
 @if (Model.Any())
 {
-    <h2>Your Projects</h2>
     <ul>
         @foreach (var project in Model)
         {
             <li>
-                <h3>
-                    <a asp-controller="Projects" asp-action="Details" asp-route-id="@project.Id">
-                        @project.Name
-                    </a>
-                </h3>
-                <p>Created: @project.CreatedAt</p>
-                <p>Last Modified: @project.LastModified</p>
-                <p>Files: @project.Files.Count</p>
+                <h3>@project.Name</h3>
+                <button class="btn btn-primary" onclick="openSnapCode('@project.Id')">Open in SnapCode</button>
             </li>
         }
     </ul>
 }
 else
 {
-    <p>You don't have any projects yet.</p>
+    <p>No projects found. Create a new project to get started.</p>
 }
 
-@if (templates != null && templates.Any())
-{
-    <h2>Template Projects</h2>
-    <ul>
-        @foreach (var template in templates)
-        {
-            <li>
-                <h3>@template.Name</h3>
-                <p>Files: @template.Files.Count</p>
-                <form asp-controller="Projects" asp-action="CopyTemplate" method="post" class="mt-2">
-                    <input type="hidden" name="templateId" value="@template.Id" />
-                    <button type="submit" class="btn btn-secondary">Use Template</button>
-                </form>
-            </li>
+<script>
+    async function openSnapCode(projectId) {
+        try {
+            // Fetch project data from the server
+            const response = await fetch(`/Projects/Details/${projectId}`, {
+                headers: { "Accept": "application/json" }
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to fetch project data.");
+            }
+
+            const project = await response.json();
+
+            // Store project files in IndexedDB
+            const db = await initIndexedDB();
+            const transaction = db.transaction("projectFiles", "readwrite");
+            const store = transaction.objectStore("projectFiles");
+
+            project.files.forEach(file => {
+                store.put(file);
+            });
+
+            transaction.oncomplete = () => {
+                console.log("Files stored in IndexedDB successfully.");
+            };
+
+            transaction.onerror = (event) => {
+                console.error("Error storing files in IndexedDB:", event.target.error);
+            };
+
+            // Redirect to the SnapCode view
+            window.location.href = "/SnapCode";
+        } catch (error) {
+            console.error("Error opening SnapCode:", error);
         }
-    </ul>
-}
-else
-{
-    <p>No templates available.</p>
-}
+    }
+
+    // Function to initialize IndexedDB
+    function initIndexedDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open("cjFS_files", 1);
+
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains("projectFiles")) {
+                    db.createObjectStore("projectFiles", { keyPath: "path" });
+                }
+            };
+
+            request.onsuccess = (event) => {
+                resolve(event.target.result);
+            };
+
+            request.onerror = (event) => {
+                reject(event.target.error);
+            };
+        });
+    }
+</script>
