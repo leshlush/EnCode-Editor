@@ -2,7 +2,7 @@
 
 namespace SnapSaves.Controllers
 {
-    public class CheerpJController : Controller
+    public class JdkController : Controller
     {
         [HttpGet]
         public IActionResult Index()

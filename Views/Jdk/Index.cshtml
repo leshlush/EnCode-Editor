@@ -6,19 +6,19 @@
 <div id="cheerpj-container" style="position: relative; height: 600px; width: 800px; margin: 0 auto; border: 1px solid #ccc;"></div>
 
 <script src="https://cjrtnc.leaningtech.com/4.0/loader.js"></script>
-<script src="/Assets/cjdom.js"></script>
+<script src="cjdom.js"></script>
 <script>
     (async function () {
         try {
             // Initialize CheerpJ
             var initParams = { version: 11, natives: cjdomNativeMethods };
-            var classPath = "/app/Assets/CJDom-2025.04.jar:" +
-                            "/app/Assets/SnapCJ-2025.04.jar:" +
-                            "/app/Assets/SnapKit-2025.04.jar:" +
-                            "/app/Assets/SnapCode-2025.04.jar:" +
-                            "/app/Assets/jdk.compiler.jar:" +
-                            "/app/Assets/SnapBuilder-2025.04.jar:" +
-                            "/app/Assets/Greenfoot-2025.04.jar";
+            var classPath = "/app/CJDom-2025.04.jar:" +
+                            "/app/SnapCJ-2025.04.jar:" +
+                            "/app/SnapKit-2025.04.jar:" +
+                            "/app/SnapCode-2025.04.jar:" +
+                            "/app/jdk.compiler.jar:" +
+                            "/app/SnapBuilder-2025.04.jar:" +
+                            "/app/Greenfoot-2025.04.jar";
 
             console.log("Initializing CheerpJ...");
             await cheerpjInit(initParams);
@@ -36,5 +36,3 @@
         }
     })();
 </script>
-
-

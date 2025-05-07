@@ -11,7 +11,7 @@
     <Content Remove="wwwroot\Assets\index.html" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="wwwroot\Assets\SnapCodeAll-2025.04.jar" />
+    <None Include="wwwroot\SnapCodeAll-2025.04.jar" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="EntityFramework" Version="6.5.1" />
@@ -23,5 +23,8 @@
     </PackageReference>
     <PackageReference Include="MongoDB.Driver" Version="3.3.0" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0-preview.3.efcore.9.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="wwwroot\Assets\" />
   </ItemGroup>
 </Project>
