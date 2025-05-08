@@ -1,5 +1,34 @@
 ﻿@{
     ViewData["Title"] = "CheerpJ Viewer";
+    var projectId = ViewData["ProjectId"] as string;
+    var userId = ViewData["UserId"] as string;
 }
 
-<iframe src="/Jdk" style="width: 100%; height: 800px; border: none;"></iframe>
+<div id="snapcode-container">
+    <iframe id="snapcode-iframe"
+            src="@Url.Action("Index", "Jdk", new { projectId = projectId, userId = userId })">
+    </iframe>
+</div>
+
+<style>
+    /* Ensure the container fills the viewport */
+    html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden; /* Prevent scrolling */
+    }
+
+    #snapcode-container {
+        height: 90vh; /* Adjust height to avoid overflow */
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    #snapcode-iframe {
+        flex: 1; /* Take up remaining space */
+        width: 100%;
+        border: none;
+    }
+</style>

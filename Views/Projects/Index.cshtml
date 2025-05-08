@@ -8,8 +8,11 @@
         @foreach (var project in Model)
         {
             <li>
-                <h3>@project.Name</h3>
-                <button class="btn btn-primary" onclick="openSnapCode('@project.Id')">Open in SnapCode</button>
+                <h3>
+                    <a asp-controller="SnapCode" asp-action="Index" asp-route-projectId="@project.Id" asp-route-userId="@User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value">
+                        @project.Name
+                    </a>
+                </h3>
             </li>
         }
     </ul>
@@ -18,64 +21,3 @@ else
 {
     <p>No projects found. Create a new project to get started.</p>
 }
-
-<script>
-    async function openSnapCode(projectId) {
-        try {
-            // Fetch project data from the server
-            const response = await fetch(`/Projects/Details/${projectId}`, {
-                headers: { "Accept": "application/json" }
-            });
-
-            if (!response.ok) {
-                throw new Error("Failed to fetch project data.");
-            }
-
-            const project = await response.json();
-
-            // Store project files in IndexedDB
-            const db = await initIndexedDB();
-            const transaction = db.transaction("projectFiles", "readwrite");
-            const store = transaction.objectStore("projectFiles");
-
-            project.files.forEach(file => {
-                store.put(file);
-            });
-
-            transaction.oncomplete = () => {
-                console.log("Files stored in IndexedDB successfully.");
-            };
-
-            transaction.onerror = (event) => {
-                console.error("Error storing files in IndexedDB:", event.target.error);
-            };
-
-            // Redirect to the SnapCode view
-            window.location.href = "/SnapCode";
-        } catch (error) {
-            console.error("Error opening SnapCode:", error);
-        }
-    }
-
-    // Function to initialize IndexedDB
-    function initIndexedDB() {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open("cjFS_files", 1);
-
-            request.onupgradeneeded = (event) => {
-                const db = event.target.result;
-                if (!db.objectStoreNames.contains("projectFiles")) {
-                    db.createObjectStore("projectFiles", { keyPath: "path" });
-                }
-            };
-
-            request.onsuccess = (event) => {
-                resolve(event.target.result);
-            };
-
-            request.onerror = (event) => {
-                reject(event.target.error);
-            };
-        });
-    }
-</script>
