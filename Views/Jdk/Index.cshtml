@@ -1,4 +1,4 @@
-﻿﻿@{
+﻿@{
     Layout = null;
     ViewData["Title"] = "CheerpJ Test";
     var projectId = ViewData["ProjectId"] as string;
@@ -27,16 +27,14 @@
             await cheerpjInit(initParams);
             console.log("CheerpJ initialized successfully.");
 
-              // Push files into CheerpJ's virtual file system
+            // Files to write into IndexedDB
             const files = [
-                { path: "/str/ExampleFile1.txt", content: "This is the content of ExampleFile1." },
-                { path: "/str/ExampleFile2.txt", content: "This is the content of ExampleFile2." }
+                { path: "/str/ExampleFile1.txt", content: "This is the content of ExampleFile1.", isDirectory: false },
+                { path: "/str/ExampleFile2.txt", content: "This is the content of ExampleFile2.", isDirectory: false }
             ];
 
-            files.forEach(file => {
-                cheerpOSAddStringFile(file.path, file.content);
-                console.log(`File added: ${file.path}`);
-            });
+            // Write files into IndexedDB
+            await writeFilesToIndexedDB(files);
 
             // Create the display inside the container
             const container = document.getElementById("cheerpj-container");
@@ -48,7 +46,58 @@
             console.error("Error initializing or running CheerpJ:", error);
         }
 
-       
+        // Function to write files into IndexedDB
+          async function writeFilesToIndexedDB(files) {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open("cjFS_/files/", 1);
+
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains("files")) {
+                    db.createObjectStore("files"); // No keyPath
+                    console.log("Object store 'files' created.");
+                }
+            };
+
+            request.onsuccess = (event) => {
+                const db = event.target.result;
+                const transaction = db.transaction("files", "readwrite");
+                const store = transaction.objectStore("files");
+
+                files.forEach(file => {
+                    // Ensure the file object includes a valid 'path' property
+                    if (!file.path || typeof file.path !== "string") {
+                        console.error("File is missing a valid 'path' property:", file);
+                        return;
+                    }
+
+                    const fileData = {
+                        content: new TextEncoder().encode(file.content), // Convert content to Uint8Array
+                        isDirectory: file.isDirectory || false // Default to false if not provided
+                    };
+
+                    store.put(fileData, file.path); // Provide the key explicitly
+                    console.log(`File written: ${file.path}`);
+                });
+
+                transaction.oncomplete = () => {
+                    console.log("All files written to IndexedDB successfully.");
+                    resolve();
+                };
+
+                transaction.onerror = (event) => {
+                    console.error("Error writing files to IndexedDB:", event.target.error);
+                    reject(event.target.error);
+                };
+            };
+
+            request.onerror = (event) => {
+                console.error("Error opening IndexedDB:", event.target.error);
+                reject(event.target.error);
+            };
+        });
+    }
+
 
     })();
 </script>
