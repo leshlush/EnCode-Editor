@@ -21,6 +21,17 @@ body {
   
 }
 
+/* Default behavior: Add margin-bottom */
+.custom-navbar {
+    margin-bottom: 1rem;
+}
+
+/* Remove margin-bottom for SnapCode layout */
+body.snapcode-layout .custom-navbar {
+    margin-bottom: 0 !important;
+}
+
+
 html, body {
     height: 100%;
     margin: 0;

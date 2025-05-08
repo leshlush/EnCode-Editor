@@ -8,18 +8,16 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/WebApplication1.styles.css" asp-append-version="true" />
 </head>
-<body>
+<body class="snapcode-layout">
     <header>
         @await Html.PartialAsync("_NavBar")
     </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
+    <main role="main">
+        @RenderBody()
+    </main>
     <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2025 - SnapCode - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+        <div>
+            &copy; 2025 - WebApplication1 - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
         </div>
     </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
