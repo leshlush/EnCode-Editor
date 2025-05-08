@@ -1,6 +1,8 @@
 ﻿﻿@{
     Layout = null;
     ViewData["Title"] = "CheerpJ Test";
+    var projectId = ViewData["ProjectId"] as string;
+    var userId = ViewData["UserId"] as string;
 }
 
 <h1>Loading Coding Environment...</h1>
@@ -25,6 +27,17 @@
             await cheerpjInit(initParams);
             console.log("CheerpJ initialized successfully.");
 
+              // Push files into CheerpJ's virtual file system
+            const files = [
+                { path: "/str/ExampleFile1.txt", content: "This is the content of ExampleFile1." },
+                { path: "/str/ExampleFile2.txt", content: "This is the content of ExampleFile2." }
+            ];
+
+            files.forEach(file => {
+                cheerpOSAddStringFile(file.path, file.content);
+                console.log(`File added: ${file.path}`);
+            });
+
             // Create the display inside the container
             const container = document.getElementById("cheerpj-container");
 
@@ -34,5 +47,8 @@
         } catch (error) {
             console.error("Error initializing or running CheerpJ:", error);
         }
+
+       
+
     })();
 </script>
