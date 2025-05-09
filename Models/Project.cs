@@ -1,6 +1,8 @@
 ﻿// Models/Project.cs
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson;
+using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
 namespace SnapSaves.Models
 {
@@ -30,15 +32,19 @@ namespace SnapSaves.Models
     public class ProjectFile
     {
         [BsonElement("path")]
+        [JsonProperty("path")]
         public string Path { get; set; }  // e.g., "src/main.js"
 
         [BsonElement("content")]
+        [JsonProperty("content")]
         public string Content { get; set; }
 
         [BsonElement("isDirectory")]
+        [JsonProperty("isDirectory")]
         public bool IsDirectory { get; set; }
 
         [BsonElement("children")]
+        [JsonProperty("children")]
         public List<ProjectFile> Children { get; set; } = new List<ProjectFile>();
     }
 }
