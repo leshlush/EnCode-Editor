@@ -1,4 +1,6 @@
-﻿namespace SnapSaves.Models
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace SnapSaves.Models
 {
     public class Course
     {
@@ -15,5 +17,8 @@
 
         // Many-to-Many relationship with Templates
         public ICollection<CourseTemplate> CourseTemplates { get; set; } = new List<CourseTemplate>();
+        
+        [NotMapped]
+        public List<Template> UniversalTemplates { get; set; }
     }
 }

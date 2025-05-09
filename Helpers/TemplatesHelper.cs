@@ -2,6 +2,7 @@
 using MongoDB.Driver;
 using SnapSaves.Data;
 using SnapSaves.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace SnapSaves.Helpers
 {
@@ -84,7 +85,7 @@ namespace SnapSaves.Helpers
             }
         }
 
-        public async Task<(bool Success, string ErrorMessage)> CreateTemplateFromProjectAsync(
+public async Task<(bool Success, string ErrorMessage)> CreateTemplateFromProjectAsync(
      string projectId,
      int courseId,
      IClientSessionHandle? session,
@@ -257,6 +258,47 @@ namespace SnapSaves.Helpers
             finally
             {
                 session?.Dispose();
+            }
+        }
+
+        public async Task<Template> CreateUniversalTemplateAsync(Project project)
+        {
+            try
+            {
+                // Step 1: Create a new Template object
+                var template = new Template
+                {
+                    MongoId = project.Id,
+                    Name = project.Name,
+                    Description = $"Universal Template created from project: {project.Name}",
+                    IsUniversal = true // Mark the template as universal
+                };
+
+                // Step 2: Add the template to the MySQL database
+                _dbContext.Templates.Add(template);
+                await _dbContext.SaveChangesAsync();
+
+                // Step 3: Return the created template
+                return template;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to create universal template: {ex.Message}", ex);
+            }
+        }
+
+        public async Task<List<Template>> GetAllUniversalTemplatesAsync()
+        {
+            try
+            {
+                // Fetch all templates where IsUniversal is true from the MySQL database
+                return await _dbContext.Templates
+                    .Where(t => t.IsUniversal == true)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to fetch universal templates: {ex.Message}", ex);
             }
         }
 
