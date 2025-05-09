@@ -44,18 +44,29 @@ namespace SnapSaves.Controllers
         [HttpGet]
         public async Task<IActionResult> Details(int id)
         {
-            // Fetch the course by ID, including associated templates and students
             var course = await _context.Courses
-                .Include(c => c.UserCourses)
-                    .ThenInclude(uc => uc.User)
                 .Include(c => c.CourseTemplates)
-                    .ThenInclude(ct => ct.Template)
+                .ThenInclude(ct => ct.Template)
+                .Include(c => c.UserCourses)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (course == null)
             {
                 return NotFound();
             }
+
+            // Load universal templates
+            var universalTemplates = await _context.Templates
+                .Where(t => t.IsUniversal == true) // Fetch only universal templates
+                .ToListAsync();
+
+            // Ensure IsUniversal is false for templates with null values
+            foreach (var template in course.CourseTemplates.Select(ct => ct.Template))
+            {
+                template.IsUniversal ??= false;
+            }
+
+            course.UniversalTemplates = universalTemplates;
 
             return View(course);
         }
