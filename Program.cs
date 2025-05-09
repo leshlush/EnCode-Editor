@@ -44,6 +44,7 @@ builder.Services.AddSingleton<MongoDbContext>();
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<TemplateHelper>();
+builder.Services.AddScoped<ProjectHelper>();
 builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<UserHelper>();
 builder.Services.AddScoped<PermissionHelper>();
@@ -80,6 +81,14 @@ app.MapControllerRoute(
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
+    // Resolve ProjectHelper and ProjectHelperTest
+  //  var projectHelper = services.GetRequiredService<ProjectHelper>();
+   // var projectHelperTest = new ProjectHelperTest(projectHelper);
+
+    // Run the test
+    //await projectHelperTest.TestCreateProjectFromDirectoryAsync();
+
+    
     var databaseSeeder = services.GetRequiredService<DatabaseSeeder>();
 
     // Seed the database

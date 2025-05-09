@@ -14,19 +14,22 @@ namespace SnapSaves.Helpers
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly UserHelper _userHelper;
         private readonly TemplateHelper _templateHelper;
+        private readonly ProjectHelper _projectHelper;
 
         public DatabaseSeeder(
             AppIdentityDbContext context,
             UserManager<AppUser> userManager,
             RoleManager<IdentityRole> roleManager,
             UserHelper userHelper,
-            TemplateHelper templateHelper)
+            TemplateHelper templateHelper,
+            ProjectHelper projectHelper)
         {
             _context = context;
             _userManager = userManager;
             _roleManager = roleManager;
             _userHelper = userHelper;
             _templateHelper = templateHelper;
+            _projectHelper = projectHelper;
         }
 
         public async Task SeedAsync()
@@ -73,9 +76,6 @@ namespace SnapSaves.Helpers
 
             return organization;
         }
-
-
-
         private async Task SeedRolesAsync()
         {
             if (!await _roleManager.RoleExistsAsync("Teacher"))
@@ -187,9 +187,6 @@ namespace SnapSaves.Helpers
                 }
             }
         }
-
-
-
         private async Task<List<Course>> SeedCoursesAsync(Organization defaultOrganization)
         {
             var courses = new List<Course>
@@ -213,7 +210,7 @@ namespace SnapSaves.Helpers
 
         private async Task SeedTeacherAsync(Organization defaultOrganization, List<Course> courses)
         {
-            var teacherEmail = "teacher@encodecreate.com";
+            var teacherEmail = "teacher2@encodecreate.com";
             var teacherPassword = "Terrap1n";
 
             // Pass the OrganizationId to the UserHelper
@@ -250,11 +247,38 @@ namespace SnapSaves.Helpers
                     });
                 }
             }
+
+            // Seed the teacher's project from the AppleCatchers folder
+            await SeedTeacherProjectAsync(teacher);
+
             await _context.SaveChangesAsync();
         }
 
+        private async Task SeedTeacherProjectAsync(AppUser teacher)
+        {
+            try
+            {
+                // Path to the AppleCatchers folder
+                var directoryPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Assets", "AppleCatchers");
 
+                // Ensure the directory exists
+                if (!Directory.Exists(directoryPath))
+                {
+                    Console.WriteLine($"Directory '{directoryPath}' does not exist. Skipping teacher project seeding.");
+                    return;
+                }
 
+                // Use ProjectHelper to create the project
+                var project = await _projectHelper.CreateProjectFromDirectoryAsync(directoryPath, teacher.MongoUserId);
+
+                Console.WriteLine($"Project '{project.Name}' created for teacher with ID: {teacher.Id}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to seed teacher project: {ex.Message}");
+            }
+        }
+    
         private async Task SeedStudentsAsync(Organization defaultOrganization, List<Course> courses)
         {
             for (int i = 1; i <= 15; i++)

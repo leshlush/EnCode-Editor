@@ -1,0 +1,16 @@
+#BlueJ class context
+comment0.target=RivalEntity
+comment0.text=\r\n\ Write\ a\ description\ of\ class\ RivalEntity\ here.\r\n\ \r\n\ @author\ (your\ name)\ \r\n\ @version\ (a\ version\ number\ or\ a\ date)\r\n
+comment1.params=
+comment1.target=RivalEntity()
+comment2.params=world
+comment2.target=void\ addedToWorld(greenfoot.World)
+comment3.params=
+comment3.target=void\ act()
+comment4.params=
+comment4.target=void\ setRivalColorBlue()
+comment5.params=
+comment5.target=void\ setRivalColorRed()
+comment6.params=
+comment6.target=void\ setRivalColorGreen()
+numComments=7

@@ -28,6 +28,7 @@
 
             // Parse the project JSON
             const project = @Html.Raw(projectJson);
+            console.log(project);
 
             // Write files into IndexedDB
             await writeFilesToIndexedDB(project.Files);

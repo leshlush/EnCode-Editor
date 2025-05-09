@@ -1,0 +1,23 @@
+#BlueJ class context
+comment0.target=Bar
+comment1.params=text\ maxValue\ value
+comment1.target=Bar(java.lang.String,\ int,\ int)
+comment10.params=textColor
+comment10.target=void\ setTextColor(greenfoot.Color)
+comment2.params=
+comment2.target=void\ act()
+comment3.params=
+comment3.target=void\ drawFrame()
+comment4.params=
+comment4.target=void\ drawBar()
+comment5.params=
+comment5.target=void\ combineComponents()
+comment6.params=
+comment6.target=void\ drawLabelText()
+comment7.params=
+comment7.target=void\ drawValueText()
+comment8.params=value
+comment8.target=void\ setValue(int)
+comment9.params=barColor
+comment9.target=void\ setBarColor(greenfoot.Color)
+numComments=11

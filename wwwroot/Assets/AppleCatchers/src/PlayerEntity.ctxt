@@ -1,0 +1,16 @@
+#BlueJ class context
+comment0.target=PlayerEntity
+comment0.text=\r\n\ Write\ a\ description\ of\ class\ PlayerEntity\ here.\r\n\ \r\n\ @author\ (your\ name)\ \r\n\ @version\ (a\ version\ number\ or\ a\ date)\r\n
+comment1.params=
+comment1.target=PlayerEntity()
+comment2.params=world
+comment2.target=void\ addedToWorld(greenfoot.World)
+comment3.params=
+comment3.target=void\ act()
+comment4.params=
+comment4.target=void\ setPlayerColorBlue()
+comment5.params=
+comment5.target=void\ setPlayerColorRed()
+comment6.params=
+comment6.target=void\ setPlayerColorGreen()
+numComments=7

@@ -1,0 +1,8 @@
+{
+	"Class": "BuildFile",
+	"Dependencies": [
+		{ "Class": "MavenDependency", "Group": "com.reportmill", "Name": "greenfoot", "Version": "2024.04" }
+	],
+	"MainClassName": "Main",
+	"IncludeSnapKitRuntime": true
+}
