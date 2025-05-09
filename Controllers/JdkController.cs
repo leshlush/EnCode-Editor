@@ -2,6 +2,7 @@
 using MongoDB.Driver;
 using SnapSaves.Data;
 using SnapSaves.Models;
+using Newtonsoft.Json;
 
 namespace SnapSaves.Controllers
 {
@@ -32,8 +33,16 @@ namespace SnapSaves.Controllers
                 return NotFound("Project not found or you do not have access to it.");
             }
 
-            // Pass the project object to the view
-            return View(project);
+            // Serialize the project to JSON
+            var projectJson = JsonConvert.SerializeObject(project, new JsonSerializerSettings
+            {
+                StringEscapeHandling = StringEscapeHandling.EscapeHtml
+            });
+
+            // Pass the JSON string to the view
+            ViewData["ProjectJson"] = projectJson;
+
+            return View();
         }
     }
 }

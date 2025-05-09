@@ -1,8 +1,7 @@
-﻿@model SnapSaves.Models.Project
-
-@{
+﻿@{
     Layout = null;
     ViewData["Title"] = "CheerpJ Test";
+    var projectJson = ViewData["ProjectJson"] as string;
 }
 
 <h1>Loading Coding Environment...</h1>
@@ -27,11 +26,11 @@
             await cheerpjInit(initParams);
             console.log("CheerpJ initialized successfully.");
 
-            // Files to write into IndexedDB
-            const files = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Files));
+            // Parse the project JSON
+            const project = @Html.Raw(projectJson);
 
             // Write files into IndexedDB
-            await writeFilesToIndexedDB(files);
+            await writeFilesToIndexedDB(project.Files);
 
             // Create the display inside the container
             const container = document.getElementById("cheerpj-container");
