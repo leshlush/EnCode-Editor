@@ -70,7 +70,7 @@ namespace SnapSaves.Helpers
 
                     projectFiles.Add(new ProjectFile
                     {
-                        Path = $"/{projectId}/{filePath}",
+                        Path = $"/SnapCode/{projectId}/{filePath}",
                         Content = File.ReadAllText(file),
                         IsDirectory = false
                     });
@@ -85,7 +85,7 @@ namespace SnapSaves.Helpers
 
                     projectFiles.Add(new ProjectFile
                     {
-                        Path = $"/{projectId}/{directoryPathInProject}",
+                        Path = $"/SnapCode/{projectId}/{directoryPathInProject}",
                         IsDirectory = true
                     });
 
@@ -95,6 +95,7 @@ namespace SnapSaves.Helpers
 
             return projectFiles;
         }
+
 
 
     }

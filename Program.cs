@@ -81,9 +81,9 @@ app.MapControllerRoute(
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    // Resolve ProjectHelper and ProjectHelperTest
+     //Resolve ProjectHelper and ProjectHelperTest
   //  var projectHelper = services.GetRequiredService<ProjectHelper>();
-   // var projectHelperTest = new ProjectHelperTest(projectHelper);
+   //var projectHelperTest = new ProjectHelperTest(projectHelper);
 
     // Run the test
     //await projectHelperTest.TestCreateProjectFromDirectoryAsync();
