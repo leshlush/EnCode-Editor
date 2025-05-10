@@ -18,12 +18,12 @@ namespace SnapSaves.Controllers
         private readonly TemplateHelper _templateHelper;
 
         public AdminController(AppIdentityDbContext context, RoleManager<IdentityRole> roleManager,
-                ProjectHelper _projectHelper, TemplateHelper _templateHelper)
+                ProjectHelper projectHelper, TemplateHelper templateHelper)
         {
             _context = context;
             _roleManager = roleManager;
-            _projectHelper = _projectHelper;
-            _templateHelper = _templateHelper;
+            _projectHelper = projectHelper;
+            _templateHelper = templateHelper;
         }
 
         [HttpPost]
@@ -32,6 +32,14 @@ namespace SnapSaves.Controllers
             if (templateZip == null || templateZip.Length == 0)
             {
                 return BadRequest("No file was uploaded.");
+            }
+
+            // Retrieve the current user's MongoUserId from claims
+            var adminUserId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
+
+            if (string.IsNullOrEmpty(adminUserId))
+            {
+                return Unauthorized("MongoUserId claim is missing for the current user.");
             }
 
             // Step 1: Save the uploaded .zip file to a temporary location
@@ -52,13 +60,12 @@ namespace SnapSaves.Controllers
             try
             {
                 // Step 3: Use ProjectHelper to create a project from the extracted directory
-                var adminUserId = "UniversalAdmin"; // Use a special ID for universal templates
                 var project = await _projectHelper.CreateProjectFromDirectoryAsync(extractPath, adminUserId);
 
-                var template = await _templateHelper.CreateUniversalTemplateAsync(project); // Use 0 or a special ID for universal templates
+                var template = await _templateHelper.CreateUniversalTemplateAsync(project);
                 if (template == null)
                 {
-                    return BadRequest($"Failed to create universal template: ");
+                    return BadRequest("Failed to create universal template.");
                 }
 
                 return RedirectToAction("Index");
@@ -76,6 +83,7 @@ namespace SnapSaves.Controllers
                 }
             }
         }
+
 
         [HttpGet]
         public async Task<IActionResult> Index()

@@ -1,4 +1,4 @@
-﻿@model List<SnapSaves.Models.Template>
+﻿@model SnapSaves.Controllers.AdminViewModel
 @using Microsoft.AspNetCore.Identity
 @inject UserManager<SnapSaves.Auth.AppUser> UserManager
 @inject SnapSaves.Helpers.PermissionHelper PermissionHelper
@@ -19,7 +19,7 @@
     <div class="tab-pane fade show active" id="universal-templates" role="tabpanel" aria-labelledby="universal-templates-tab">
         <h2>Universal Templates</h2>
         <ul>
-            @foreach (var template in Model)
+            @foreach (var template in Model.UniversalTemplates)
             {
                 <li>@template.Name - @template.Description</li>
             }
