@@ -48,6 +48,7 @@ namespace SnapSaves.Controllers
                 .Include(c => c.CourseTemplates)
                 .ThenInclude(ct => ct.Template)
                 .Include(c => c.UserCourses)
+                .ThenInclude(uc => uc.User)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (course == null)
