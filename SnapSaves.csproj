@@ -17,7 +17,6 @@
     <None Include="wwwroot\Jdk\SnapCJ-2025.05.jar" />
     <None Include="wwwroot\Jdk\SnapCode-2025.05.jar" />
     <None Include="wwwroot\Jdk\SnapKit-2025.05.jar" />
-    <None Include="wwwroot\SnapCodeAll-2025.04.jar" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="EntityFramework" Version="6.5.1" />
