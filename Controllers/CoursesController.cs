@@ -44,6 +44,7 @@ namespace SnapSaves.Controllers
         [HttpGet]
         public async Task<IActionResult> Details(int id)
         {
+            // Fetch the course with its related data
             var course = await _context.Courses
                 .Include(c => c.CourseTemplates)
                 .ThenInclude(ct => ct.Template)
@@ -56,9 +57,9 @@ namespace SnapSaves.Controllers
                 return NotFound();
             }
 
-            // Load universal templates
+            // Fetch all universal templates (not tied to the course)
             var universalTemplates = await _context.Templates
-                .Where(t => t.IsUniversal == true) // Fetch only universal templates
+                .Where(t => t.IsUniversal == true) // Fetch only templates marked as universal
                 .ToListAsync();
 
             // Ensure IsUniversal is false for templates with null values
@@ -67,9 +68,11 @@ namespace SnapSaves.Controllers
                 template.IsUniversal ??= false;
             }
 
+            // Add universal templates to the course's UniversalTemplates property
             course.UniversalTemplates = universalTemplates;
 
             return View(course);
         }
+
     }
 }
