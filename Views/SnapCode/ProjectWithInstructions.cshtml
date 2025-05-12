@@ -1,0 +1,73 @@
+﻿@model SnapSaves.Models.Project
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@Model.Name - SnapCode</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            height: 100vh;
+        }
+
+        #instructions {
+            width: 25%;
+            border-right: 1px solid #ccc;
+            height: 100%;
+        }
+
+        #jdk {
+            width: 75%;
+            height: 100%;
+        }
+
+        .full-width {
+            width: 100%;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <iframe id="instructions" src="/instructions-placeholder.html"></iframe>
+    <iframe id="jdk" src="/Jdk/Index?projectId=@Model.Id"></iframe>
+
+    <script>
+        const instructionsFrame = document.getElementById('instructions');
+        const jdkFrame = document.getElementById('jdk');
+
+        function toggleView(view) {
+            if (view === 'instructions') {
+                instructionsFrame.classList.remove('hidden');
+                instructionsFrame.classList.add('full-width');
+                jdkFrame.classList.add('hidden');
+            } else if (view === 'jdk') {
+                jdkFrame.classList.remove('hidden');
+                jdkFrame.classList.add('full-width');
+                instructionsFrame.classList.add('hidden');
+            } else {
+                instructionsFrame.classList.remove('hidden', 'full-width');
+                jdkFrame.classList.remove('hidden', 'full-width');
+            }
+        }
+
+        // Example: Add buttons to toggle views
+        const toggleButtons = document.createElement('div');
+        toggleButtons.style.position = 'absolute';
+        toggleButtons.style.top = '10px';
+        toggleButtons.style.left = '10px';
+        toggleButtons.style.zIndex = '1000';
+        toggleButtons.innerHTML = `
+            <button onclick="toggleView('default')">Default View</button>
+            <button onclick="toggleView('instructions')">Instructions Only</button>
+            <button onclick="toggleView('jdk')">JDK Only</button>
+        `;
+        document.body.appendChild(toggleButtons);
+    </script>
+</body>
+</html>

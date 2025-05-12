@@ -12,5 +12,6 @@ namespace SnapSaves.Controllers
             ViewData["UserId"] = userId;
             return View();
         }
+
     }
 }

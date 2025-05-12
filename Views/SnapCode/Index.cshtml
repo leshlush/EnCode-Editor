@@ -1,12 +1,15 @@
 ﻿@{
-	Layout = "~/Views/Shared/_SnapCodeLayout.cshtml";
+    Layout = "~/Views/Shared/_SnapCodeLayout.cshtml";
     ViewData["Title"] = "CheerpJ Viewer";
     var projectId = ViewData["ProjectId"] as string;
     var userId = ViewData["UserId"] as string;
 }
 
 <div id="snapcode-container">
-    <iframe id="snapcode-iframe"
+    <iframe id="instructions-iframe"
+            src="@Url.Action("Placeholder", "Instructions")">
+    </iframe>
+    <iframe id="jdk-iframe"
             src="@Url.Action("Index", "Jdk", new { projectId = projectId, userId = userId })">
     </iframe>
 </div>
@@ -17,18 +20,45 @@
         margin: 0;
         padding: 0;
         overflow: hidden;
+        font-family: Arial, sans-serif;
     }
 
     #snapcode-container {
-        height: 90vh;
-        width: 100%;
         display: flex;
-        flex-direction: column;
+        height: 100vh;
     }
 
-    #snapcode-iframe {
-        flex: 1;
-        width: 100%;
+    #instructions-iframe {
+        width: 25%;
+        border-right: 1px solid #ccc;
+        height: 100%;
+    }
+
+    #jdk-iframe {
+        width: 75%;
+        height: 100%;
         border: none;
     }
 </style>
+
+<script>
+    function setView(view) {
+        const instructionsFrame = document.getElementById('instructions-iframe');
+        const jdkFrame = document.getElementById('jdk-iframe');
+
+        if (view === 'split') {
+            instructionsFrame.style.width = '25%';
+            instructionsFrame.style.display = 'block';
+            jdkFrame.style.width = '75%';
+            jdkFrame.style.display = 'block';
+        } else if (view === 'instructions') {
+            instructionsFrame.style.width = '100%';
+            instructionsFrame.style.display = 'block';
+            jdkFrame.style.display = 'none';
+        } else if (view === 'jdk') {
+            jdkFrame.style.width = '100%';
+            jdkFrame.style.display = 'block';
+            instructionsFrame.style.display = 'none';
+        }
+    }
+</script>
