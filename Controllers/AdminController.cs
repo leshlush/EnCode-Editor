@@ -27,11 +27,17 @@ namespace SnapSaves.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> UploadUniversalTemplate(IFormFile templateZip)
+        [HttpPost]
+        public async Task<IActionResult> UploadUniversalTemplate(IFormFile templateZip, string projectName, string projectDescription)
         {
             if (templateZip == null || templateZip.Length == 0)
             {
                 return BadRequest("No file was uploaded.");
+            }
+
+            if (string.IsNullOrWhiteSpace(projectName) || string.IsNullOrWhiteSpace(projectDescription))
+            {
+                return BadRequest("Project name and description are required.");
             }
 
             // Retrieve the current user's MongoUserId from claims
@@ -62,7 +68,11 @@ namespace SnapSaves.Controllers
                 // Step 3: Use ProjectHelper to create a project from the extracted directory
                 var project = await _projectHelper.CreateProjectFromDirectoryAsync(extractPath, adminUserId);
 
-                var template = await _templateHelper.CreateUniversalTemplateAsync(project);
+                // Update the project with the provided name and description
+                project.Name = projectName;
+                
+
+                var template = await _templateHelper.CreateUniversalTemplateAsync(project, projectDescription);
                 if (template == null)
                 {
                     return BadRequest("Failed to create universal template.");
@@ -83,6 +93,7 @@ namespace SnapSaves.Controllers
                 }
             }
         }
+
 
 
         [HttpGet]

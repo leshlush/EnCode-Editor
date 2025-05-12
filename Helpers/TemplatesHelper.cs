@@ -261,7 +261,7 @@ public async Task<(bool Success, string ErrorMessage)> CreateTemplateFromProject
             }
         }
 
-        public async Task<Template> CreateUniversalTemplateAsync(Project project)
+        public async Task<Template> CreateUniversalTemplateAsync(Project project,string description)
         {
             try
             {
@@ -270,7 +270,7 @@ public async Task<(bool Success, string ErrorMessage)> CreateTemplateFromProject
                 {
                     MongoId = project.Id,
                     Name = project.Name,
-                    Description = $"Universal Template created from project: {project.Name}",
+                    Description = description,
                     IsUniversal = true // Mark the template as universal
                 };
 
