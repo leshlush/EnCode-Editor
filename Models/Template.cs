@@ -1,4 +1,6 @@
-﻿namespace SnapSaves.Models
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace SnapSaves.Models
 {
     public class Template
     {
@@ -6,9 +8,14 @@
         public string MongoId { get; set; } = string.Empty; // MongoDB ID
         public string Name { get; set; } = string.Empty; // Template name
         public string Description { get; set; } = string.Empty; // Template description
-        public bool? IsUniversal { get; set; } 
+        public bool? IsUniversal { get; set; }
 
-        // Many-to-Many relationship with Course
+        public string? InstructionsId { get; set; }
+        [NotMapped]
+        public Instructions? Instructions { get; set; }
+
         public ICollection<CourseTemplate> CourseTemplates { get; set; } = new List<CourseTemplate>();
+
+       
     }
 }

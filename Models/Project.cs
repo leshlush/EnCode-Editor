@@ -3,6 +3,7 @@ using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson;
 using System.Text.Json.Serialization;
 using Newtonsoft.Json;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SnapSaves.Models
 {
@@ -27,6 +28,10 @@ namespace SnapSaves.Models
 
         [BsonElement("files")]
         public List<ProjectFile> Files { get; set; } = new List<ProjectFile>();
+        public string? InstructionsId { get; set; }
+        [NotMapped]
+        public Instructions? Instructions { get; set; }
+
     }
 
     public class ProjectFile

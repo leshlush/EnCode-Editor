@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SnapSaves.Data;
 
@@ -11,9 +12,11 @@ using SnapSaves.Data;
 namespace SnapSaves.Data.Migrations.Identity
 {
     [DbContext(typeof(AppIdentityDbContext))]
-    partial class AppIdentityDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250512200254_AddInstructions")]
+    partial class AddInstructions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -398,7 +401,7 @@ namespace SnapSaves.Data.Migrations.Identity
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<string>("InstructionsId")
+                    b.Property<string>("InstructionsMongoId")
                         .HasColumnType("longtext");
 
                     b.Property<bool?>("IsUniversal")
