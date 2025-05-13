@@ -52,6 +52,28 @@ namespace SnapSaves.Controllers
             return View(new List<Project>());
         }
 
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(string id)
+        {
+            if (!User.Identity?.IsAuthenticated ?? false)
+                return Unauthorized("User is not authenticated");
+
+            var userId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("MongoUserId claim is missing");
+
+            // Only allow deleting user's own projects
+            var result = await _dbContext.Projects.DeleteOneAsync(p => p.Id == id && p.UserId == userId);
+
+            if (result.DeletedCount == 0)
+                return NotFound("Project not found or you do not have permission to delete it.");
+
+            return RedirectToAction(nameof(Index));
+        }
+
+
 
 
 

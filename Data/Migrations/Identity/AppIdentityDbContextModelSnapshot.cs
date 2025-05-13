@@ -279,6 +279,29 @@ namespace SnapSaves.Data.Migrations.Identity
                     b.ToTable("CourseTemplates");
                 });
 
+            modelBuilder.Entity("SnapSaves.Models.Instructions", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Instructions");
+                });
+
             modelBuilder.Entity("SnapSaves.Models.LtiUser", b =>
                 {
                     b.Property<int>("Id")

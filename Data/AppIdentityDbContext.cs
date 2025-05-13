@@ -19,6 +19,7 @@ namespace SnapSaves.Data
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<Organization> Organizations { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
+        public DbSet<Instructions> Instructions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

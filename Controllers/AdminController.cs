@@ -9,7 +9,7 @@ using SnapSaves.Models;
 
 namespace SnapSaves.Controllers
 {
-    [Authorize(Roles = "Admin")] // Restrict access to Admin role
+    [Authorize(Roles = "Admin")]
     public class AdminController : Controller
     {
         private readonly AppIdentityDbContext _context;
@@ -27,8 +27,13 @@ namespace SnapSaves.Controllers
         }
 
         [HttpPost]
-        [HttpPost]
-        public async Task<IActionResult> UploadUniversalTemplate(IFormFile templateZip, string projectName, string projectDescription)
+        [RequestSizeLimit(104_857_600)]
+        public async Task<IActionResult> UploadUniversalTemplate(
+            [FromForm] IFormFile templateZip,
+            [FromForm] string projectName,
+            [FromForm] string projectDescription,
+            [FromForm] bool hasInstructions,
+            [FromForm] IFormFile? instructionsZip)
         {
             if (templateZip == null || templateZip.Length == 0)
             {
@@ -48,12 +53,40 @@ namespace SnapSaves.Controllers
                 return Unauthorized("MongoUserId claim is missing for the current user.");
             }
 
+            string? instructionsId = null;
+            if (hasInstructions && instructionsZip != null && instructionsZip.Length > 0)
+            {
+                // Save the instructions zip to wwwroot/instructions/{guid}/
+                var instructionsFolder = Path.Combine("wwwroot", "instructions", Guid.NewGuid().ToString());
+                Directory.CreateDirectory(instructionsFolder);
+
+                var instructionsZipFilePath = Path.Combine(instructionsFolder, instructionsZip.FileName);
+                using (var stream = new FileStream(instructionsZipFilePath, FileMode.Create))
+                {
+                    await instructionsZip.CopyToAsync(stream);
+                }
+                // Extract the zip
+                ZipFile.ExtractToDirectory(instructionsZipFilePath, instructionsFolder);
+
+                // Save the relative path to index.html as the Location in Instructions
+                var instructions = new Instructions
+                {
+                    Type = InstructionsType.Static,
+                    Location = Path.Combine("instructions", Path.GetFileName(instructionsFolder), "index.html"),
+                    Description = "Instructions for " + projectName,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.Instructions.Add(instructions);
+                await _context.SaveChangesAsync();
+                instructionsId = instructions.Id;
+            }
+
             // Step 1: Save the uploaded .zip file to a temporary location
             var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
             Directory.CreateDirectory(tempPath);
 
-            var zipFilePath = Path.Combine(tempPath, templateZip.FileName);
-            using (var stream = new FileStream(zipFilePath, FileMode.Create))
+            var templateZipFilePath = Path.Combine(tempPath, templateZip.FileName);
+            using (var stream = new FileStream(templateZipFilePath, FileMode.Create))
             {
                 await templateZip.CopyToAsync(stream);
             }
@@ -61,7 +94,7 @@ namespace SnapSaves.Controllers
             // Step 2: Extract the .zip file
             var extractPath = Path.Combine(tempPath, "Extracted");
             Directory.CreateDirectory(extractPath);
-            ZipFile.ExtractToDirectory(zipFilePath, extractPath);
+            ZipFile.ExtractToDirectory(templateZipFilePath, extractPath);
 
             try
             {
@@ -70,12 +103,19 @@ namespace SnapSaves.Controllers
 
                 // Update the project with the provided name and description
                 project.Name = projectName;
-                
 
+                // Create the universal template and set the instructions if present
                 var template = await _templateHelper.CreateUniversalTemplateAsync(project, projectDescription);
                 if (template == null)
                 {
                     return BadRequest("Failed to create universal template.");
+                }
+
+                if (!string.IsNullOrEmpty(instructionsId))
+                {
+                    template.InstructionsId = instructionsId;
+                    _context.Templates.Update(template);
+                    await _context.SaveChangesAsync();
                 }
 
                 return RedirectToAction("Index");
@@ -94,21 +134,16 @@ namespace SnapSaves.Controllers
             }
         }
 
-
-
         [HttpGet]
         public async Task<IActionResult> Index()
         {
-            // Fetch all roles and their permissions
             var roles = await _roleManager.Roles.ToListAsync();
             var rolePermissions = await _context.RolePermissions
                 .Include(rp => rp.Permission)
                 .ToListAsync();
 
-            // Fetch all organizations
             var organizations = await _context.Organizations.ToListAsync();
 
-            // Group permissions by role
             var rolePermissionsViewModel = roles.Select(role => new RolePermissionsViewModel
             {
                 RoleName = role.Name,
@@ -120,7 +155,6 @@ namespace SnapSaves.Controllers
 
             var universalTemplates = await _templateHelper.GetAllUniversalTemplatesAsync();
 
-            // Create the view model
             var viewModel = new AdminViewModel
             {
                 Roles = rolePermissionsViewModel,
