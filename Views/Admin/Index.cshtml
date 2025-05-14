@@ -26,7 +26,17 @@
         <ul>
             @foreach (var template in Model.UniversalTemplates)
             {
-                <li>@template.Name - @template.Description</li>
+                <li>
+                    @template.Name - @template.Description
+                    <form asp-controller="Admin" asp-action="DeleteTemplate" asp-route-id="@template.Id" method="post" style="display:inline;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this template?');">Delete</button>
+                    </form>
+                    <form asp-controller="Admin" asp-action="CreateProjectFromTemplate" asp-route-templateId="@template.Id" method="post" style="display:inline;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-primary btn-sm">Create Project</button>
+                    </form>
+                </li>
             }
         </ul>
     </div>

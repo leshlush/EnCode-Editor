@@ -34,6 +34,7 @@ namespace SnapSaves.Controllers
                 {
                     instructionsPath = "/" + instructions.Location.Replace("\\", "/");
                 }
+                project.Instructions = instructions;
             }
 
             if (!string.IsNullOrEmpty(instructionsPath))

@@ -326,6 +326,12 @@ namespace SnapSaves.Helpers
 
         private async Task SeedTemplatesAsync(List<Course> courses)
         {
+            if (courses == null || courses.Count == 0)
+            {
+                Console.WriteLine("No courses found. Skipping template seeding.");
+                return;
+            }
+
             var templates = new List<(string Name, string Description)>
     {
         ("Template 1", "Description for Template 1"),
@@ -342,6 +348,23 @@ namespace SnapSaves.Helpers
             for (int i = 0; i < templates.Count; i++)
             {
                 var course = courses[i / 3]; // Distribute templates across 3 courses
+
+                // Check if a template with the same name already exists for this course
+                var existingTemplate = await _context.Templates
+                    .Where(t => t.Name == templates[i].Name)
+                    .Join(_context.CourseTemplates,
+                        t => t.Id,
+                        ct => ct.TemplateId,
+                        (t, ct) => new { t, ct })
+                    .Where(x => x.ct.CourseId == course.Id)
+                    .Select(x => x.t)
+                    .FirstOrDefaultAsync();
+
+                if (existingTemplate != null)
+                {
+                    Console.WriteLine($"Template '{templates[i].Name}' already exists for course '{course.Name}'. Skipping.");
+                    continue;
+                }
 
                 // Create a new project object
                 var project = new Project
@@ -366,7 +389,7 @@ namespace SnapSaves.Helpers
             }
                 };
 
-                // Use the new method to create a template from the project
+                // Use the helper to create a template from the project
                 var (success, errorMessage) = await _templateHelper.CreateNewProjectTemplateAsync(project, course.Id);
                 if (!success)
                 {
@@ -374,15 +397,11 @@ namespace SnapSaves.Helpers
                 }
                 else
                 {
-                    // Ensure the template is added to the database
-                    var template = await _context.Templates.FirstOrDefaultAsync(t => t.MongoId == project.Id);
-                    if (template == null)
-                    {
-                        Console.WriteLine($"Template '{templates[i].Name}' was not added to the database.");
-                    }
+                    Console.WriteLine($"Template '{templates[i].Name}' created for course '{course.Name}'.");
                 }
             }
         }
+
 
     }
 }

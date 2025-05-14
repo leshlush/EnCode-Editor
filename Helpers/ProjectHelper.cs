@@ -96,6 +96,33 @@ namespace SnapSaves.Helpers
             return projectFiles;
         }
 
+        public async Task<(bool Success, string ErrorMessage)> CreateProjectFromTemplateAsync(Template template, string userId)
+        {
+            // Find the template project in MongoDB
+            var templateProject = await _dbContext.TemplateProjects.Find(p => p.Id == template.MongoId).FirstOrDefaultAsync();
+            if (templateProject == null)
+                return (false, "Template project not found in MongoDB.");
+
+            // Create a new project for the user
+            var newProject = new Project
+            {
+                Name = template.Name,
+                UserId = userId,
+                CreatedAt = DateTime.UtcNow,
+                LastModified = DateTime.UtcNow,
+                Files = templateProject.Files.Select(f => new ProjectFile
+                {
+                    Path = f.Path,
+                    Content = f.Content,
+                    IsDirectory = f.IsDirectory,
+                    Children = f.Children
+                }).ToList(),
+                InstructionsId = template.InstructionsId
+            };
+
+            await _dbContext.Projects.InsertOneAsync(newProject);
+            return (true, "");
+        }
 
 
     }

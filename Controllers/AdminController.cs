@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MongoDB.Driver;
 using SnapSaves.Data;
 using SnapSaves.Helpers;
 using SnapSaves.Models;
@@ -13,17 +14,19 @@ namespace SnapSaves.Controllers
     public class AdminController : Controller
     {
         private readonly AppIdentityDbContext _context;
+        private readonly MongoDbContext _mongoDbContext;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ProjectHelper _projectHelper;
         private readonly TemplateHelper _templateHelper;
 
         public AdminController(AppIdentityDbContext context, RoleManager<IdentityRole> roleManager,
-                ProjectHelper projectHelper, TemplateHelper templateHelper)
+                ProjectHelper projectHelper, TemplateHelper templateHelper, MongoDbContext mongoDbContext)
         {
             _context = context;
             _roleManager = roleManager;
             _projectHelper = projectHelper;
             _templateHelper = templateHelper;
+            _mongoDbContext = mongoDbContext;
         }
 
         [HttpPost]
@@ -71,8 +74,9 @@ namespace SnapSaves.Controllers
                 // Save the relative path to index.html as the Location in Instructions
                 var instructions = new Instructions
                 {
+                    Id = Guid.NewGuid().ToString(),
                     Type = InstructionsType.Static,
-                    Location = Path.Combine("instructions", Path.GetFileName(instructionsFolder), "index.html"),
+                    Location = Path.Combine("instructions", Path.GetFileName(instructionsFolder), "content", "index.html")
                     Description = "Instructions for " + projectName,
                     CreatedAt = DateTime.UtcNow
                 };
@@ -133,6 +137,51 @@ namespace SnapSaves.Controllers
                 }
             }
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteTemplate(int id)
+        {
+            var template = await _context.Templates.FindAsync(id);
+            if (template == null)
+                return NotFound();
+
+            // Remove from MySQL
+            _context.Templates.Remove(template);
+            await _context.SaveChangesAsync();
+
+            // Remove from MongoDB TemplateProjects (if exists)
+            if (!string.IsNullOrEmpty(template.MongoId))
+            {
+                var filter = Builders<Project>.Filter.Eq(p => p.Id, template.MongoId);
+                await _mongoDbContext.TemplateProjects.DeleteOneAsync(filter);
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateProjectFromTemplate(int templateId)
+        {
+            var template = await _context.Templates.FindAsync(templateId);
+            if (template == null)
+                return NotFound();
+
+            // Get the current admin's MongoUserId
+            var userId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("MongoUserId claim is missing");
+
+            // Use ProjectHelper to create the project
+            var result = await _projectHelper.CreateProjectFromTemplateAsync(template, userId);
+            if (!result.Success)
+                return BadRequest(result.ErrorMessage);
+
+            return RedirectToAction("Index", "Projects");
+        }
+
 
         [HttpGet]
         public async Task<IActionResult> Index()

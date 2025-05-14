@@ -261,11 +261,14 @@ public async Task<(bool Success, string ErrorMessage)> CreateTemplateFromProject
             }
         }
 
-        public async Task<Template> CreateUniversalTemplateAsync(Project project,string description)
+        public async Task<Template> CreateUniversalTemplateAsync(Project project, string description)
         {
             try
             {
-                // Step 1: Create a new Template object
+                // Step 1: Insert the project into MongoDB TemplateProjects
+                await _mongoDbContext.TemplateProjects.InsertOneAsync(project);
+
+                // Step 2: Create a new Template object in MySQL
                 var template = new Template
                 {
                     MongoId = project.Id,
@@ -274,11 +277,9 @@ public async Task<(bool Success, string ErrorMessage)> CreateTemplateFromProject
                     IsUniversal = true // Mark the template as universal
                 };
 
-                // Step 2: Add the template to the MySQL database
                 _dbContext.Templates.Add(template);
                 await _dbContext.SaveChangesAsync();
 
-                // Step 3: Return the created template
                 return template;
             }
             catch (Exception ex)
@@ -286,6 +287,8 @@ public async Task<(bool Success, string ErrorMessage)> CreateTemplateFromProject
                 throw new Exception($"Failed to create universal template: {ex.Message}", ex);
             }
         }
+
+
 
         public async Task<List<Template>> GetAllUniversalTemplatesAsync()
         {

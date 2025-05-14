@@ -1,73 +1,71 @@
-﻿@model SnapSaves.Models.Project
+﻿@{
+    Layout = "~/Views/Shared/_SnapCodeLayout.cshtml";
+    ViewData["Title"] = "CheerpJ Viewer";
+    var projectId = ViewData["ProjectId"] as string ?? Model?.Id;
+    var userId = ViewData["UserId"] as string;
+    var instructionsId = ViewData["InstructionsId"] as string ?? Model?.InstructionsId;
+    var instructionsUrl = ViewData["InstructionsUrl"] as string;
+    // Fallback: if instructionsUrl is not set, try to build it from Model.Instructions.Location
+    if (string.IsNullOrEmpty(instructionsUrl) && Model?.Instructions != null && !string.IsNullOrEmpty(Model.Instructions.Location))
+    {
+        instructionsUrl = "/" + Model.Instructions.Location.Replace("\\", "/").TrimStart('/');
+    }
+}
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@Model.Name - SnapCode</title>
-    <style>
-        body {
-            margin: 0;
-            display: flex;
-            height: 100vh;
+<div id="snapcode-container">
+    <iframe id="instructions-iframe"
+            src="@(string.IsNullOrEmpty(instructionsUrl) ? Url.Action("Placeholder", "Instructions") : instructionsUrl)">
+    </iframe>
+    <iframe id="jdk-iframe"
+            src="@Url.Action("Index", "Jdk", new { projectId = projectId, userId = userId })">
+    </iframe>
+</div>
+
+<style>
+    html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+    }
+
+    #snapcode-container {
+        display: flex;
+        height: 100vh;
+    }
+
+    #instructions-iframe {
+        width: 25%;
+        border-right: 1px solid #ccc;
+        height: 100%;
+    }
+
+    #jdk-iframe {
+        width: 75%;
+        height: 100%;
+        border: none;
+    }
+</style>
+
+<script>
+    function setView(view) {
+        const instructionsFrame = document.getElementById('instructions-iframe');
+        const jdkFrame = document.getElementById('jdk-iframe');
+
+        if (view === 'split') {
+            instructionsFrame.style.width = '25%';
+            instructionsFrame.style.display = 'block';
+            jdkFrame.style.width = '75%';
+            jdkFrame.style.display = 'block';
+        } else if (view === 'instructions') {
+            instructionsFrame.style.width = '100%';
+            instructionsFrame.style.display = 'block';
+            jdkFrame.style.display = 'none';
+        } else if (view === 'jdk') {
+            jdkFrame.style.width = '100%';
+            jdkFrame.style.display = 'block';
+            instructionsFrame.style.display = 'none';
         }
-
-        #instructions {
-            width: 25%;
-            border-right: 1px solid #ccc;
-            height: 100%;
-        }
-
-        #jdk {
-            width: 75%;
-            height: 100%;
-        }
-
-        .full-width {
-            width: 100%;
-        }
-
-        .hidden {
-            display: none;
-        }
-    </style>
-</head>
-<body>
-    <iframe id="instructions" src="/instructions-placeholder.html"></iframe>
-    <iframe id="jdk" src="/Jdk/Index?projectId=@Model.Id"></iframe>
-
-    <script>
-        const instructionsFrame = document.getElementById('instructions');
-        const jdkFrame = document.getElementById('jdk');
-
-        function toggleView(view) {
-            if (view === 'instructions') {
-                instructionsFrame.classList.remove('hidden');
-                instructionsFrame.classList.add('full-width');
-                jdkFrame.classList.add('hidden');
-            } else if (view === 'jdk') {
-                jdkFrame.classList.remove('hidden');
-                jdkFrame.classList.add('full-width');
-                instructionsFrame.classList.add('hidden');
-            } else {
-                instructionsFrame.classList.remove('hidden', 'full-width');
-                jdkFrame.classList.remove('hidden', 'full-width');
-            }
-        }
-
-        // Example: Add buttons to toggle views
-        const toggleButtons = document.createElement('div');
-        toggleButtons.style.position = 'absolute';
-        toggleButtons.style.top = '10px';
-        toggleButtons.style.left = '10px';
-        toggleButtons.style.zIndex = '1000';
-        toggleButtons.innerHTML = `
-            <button onclick="toggleView('default')">Default View</button>
-            <button onclick="toggleView('instructions')">Instructions Only</button>
-            <button onclick="toggleView('jdk')">JDK Only</button>
-        `;
-        document.body.appendChild(toggleButtons);
-    </script>
-</body>
-</html>
+    }
+</script>
