@@ -76,7 +76,7 @@ namespace SnapSaves.Controllers
                 {
                     Id = Guid.NewGuid().ToString(),
                     Type = InstructionsType.Static,
-                    Location = Path.Combine("instructions", Path.GetFileName(instructionsFolder), "content", "index.html")
+                    Location = Path.Combine("instructions", Path.GetFileName(instructionsFolder), "content", "index.html"),
                     Description = "Instructions for " + projectName,
                     CreatedAt = DateTime.UtcNow
                 };
