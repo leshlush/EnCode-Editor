@@ -32,11 +32,11 @@ namespace SnapSaves.Controllers
         [HttpPost]
         [RequestSizeLimit(104_857_600)]
         public async Task<IActionResult> UploadUniversalTemplate(
-            [FromForm] IFormFile templateZip,
-            [FromForm] string projectName,
-            [FromForm] string projectDescription,
-            [FromForm] bool hasInstructions,
-            [FromForm] IFormFile? instructionsZip)
+    [FromForm] IFormFile templateZip,
+    [FromForm] string projectName,
+    [FromForm] string projectDescription,
+    [FromForm] bool hasInstructions,
+    [FromForm] IFormFile? instructionsZip)
         {
             if (templateZip == null || templateZip.Length == 0)
             {
@@ -71,7 +71,7 @@ namespace SnapSaves.Controllers
                 // Extract the zip
                 ZipFile.ExtractToDirectory(instructionsZipFilePath, instructionsFolder);
 
-                // Save the relative path to index.html as the Location in Instructions
+                // Save the relative path to content/index.html as the Location in Instructions
                 var instructions = new Instructions
                 {
                     Id = Guid.NewGuid().ToString(),
@@ -122,6 +122,9 @@ namespace SnapSaves.Controllers
                     await _context.SaveChangesAsync();
                 }
 
+                // Delete the temporary project from MongoDB Projects collection
+                await _mongoDbContext.Projects.DeleteOneAsync(p => p.Id == project.Id);
+
                 return RedirectToAction("Index");
             }
             catch (Exception ex)
@@ -137,6 +140,7 @@ namespace SnapSaves.Controllers
                 }
             }
         }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
