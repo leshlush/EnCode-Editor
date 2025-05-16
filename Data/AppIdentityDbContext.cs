@@ -25,6 +25,15 @@ namespace SnapSaves.Data
         {
             base.OnModelCreating(builder);
 
+            // Force Identity tables to lowercase
+            builder.Entity<AppUser>().ToTable("aspnetusers");
+            builder.Entity<IdentityRole>().ToTable("aspnetroles");
+            builder.Entity<IdentityUserRole<string>>().ToTable("aspnetuserroles");
+            builder.Entity<IdentityUserClaim<string>>().ToTable("aspnetuserclaims");
+            builder.Entity<IdentityUserLogin<string>>().ToTable("aspnetuserlogins");
+            builder.Entity<IdentityUserToken<string>>().ToTable("aspnetusertokens");
+            builder.Entity<IdentityRoleClaim<string>>().ToTable("aspnetroleclaims");
+
             // Configure Template
             builder.Entity<Template>(entity =>
             {
