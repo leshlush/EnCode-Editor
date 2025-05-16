@@ -7,6 +7,9 @@ using SnapSaves.Data;
 using SnapSaves.Helpers;
 using SnapSaves.Models;
 using Microsoft.AspNetCore.DataProtection;
+using AspNetCore.DataProtection.Aws.S3;
+using Amazon;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,7 +54,24 @@ builder.Services.AddScoped<UserHelper>();
 builder.Services.AddScoped<PermissionHelper>();
 builder.Services.AddScoped<IUserClaimsPrincipalFactory<AppUser>, CustomUserClaimsPrincipalFactory>();
 builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo("/app/dataprotection-keys"));
+    .PersistKeysToAwsS3(
+        bucket: "your-space-name",
+        region: Amazon.RegionEndpoint.GetBySystemName("nyc3"),
+        directory: "dataprotection-keys"
+    );
+
+builder.Services.ConfigureApplicationCookie(options =>
+
+builder.Services.AddDataProtection()
+   .PersistKeysToAwsS3(
+       s3BucketName: "your-space-name",
+       region: Amazon.RegionEndpoint.GetBySystemName("nyc3"),
+       directory: "dataprotection-keys"
+   );
+{
+    options.LoginPath = "/Auth/Login";
+}); 
+
 
 
 var app = builder.Build();

@@ -19,6 +19,7 @@
     <None Include="wwwroot\Jdk\SnapKit-2025.05.jar" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="AspNetCore.DataProtection.Aws.S3" Version="2.2.0" />
     <PackageReference Include="EntityFramework" Version="6.5.1" />
     <PackageReference Include="LtiLibrary.AspNetCore" Version="3.2.9" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.4" />
