@@ -6,6 +6,7 @@ using SnapSaves.Auth;
 using SnapSaves.Data;
 using SnapSaves.Helpers;
 using SnapSaves.Models;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,6 +50,8 @@ builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<UserHelper>();
 builder.Services.AddScoped<PermissionHelper>();
 builder.Services.AddScoped<IUserClaimsPrincipalFactory<AppUser>, CustomUserClaimsPrincipalFactory>();
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo("/app/dataprotection-keys"));
 
 
 var app = builder.Build();
