@@ -15,6 +15,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Configure MySQL Identity
 var mysqlConnection = builder.Configuration.GetConnectionString("MySQLIdentity");
+
+Console.WriteLine($"[DEBUG] MySQL Connection String: {mysqlConnection}");
+
 builder.Services.AddDbContext<AppIdentityDbContext>(options =>
     options.UseMySql(
         mysqlConnection,
