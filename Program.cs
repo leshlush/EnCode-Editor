@@ -54,24 +54,7 @@ builder.Services.AddScoped<UserHelper>();
 builder.Services.AddScoped<PermissionHelper>();
 builder.Services.AddScoped<IUserClaimsPrincipalFactory<AppUser>, CustomUserClaimsPrincipalFactory>();
 builder.Services.AddDataProtection()
-    .PersistKeysToAwsS3(
-        bucket: "your-space-name",
-        region: Amazon.RegionEndpoint.GetBySystemName("nyc3"),
-        directory: "dataprotection-keys"
-    );
-
-builder.Services.ConfigureApplicationCookie(options =>
-
-builder.Services.AddDataProtection()
-   .PersistKeysToAwsS3(
-       s3BucketName: "your-space-name",
-       region: Amazon.RegionEndpoint.GetBySystemName("nyc3"),
-       directory: "dataprotection-keys"
-   );
-{
-    options.LoginPath = "/Auth/Login";
-}); 
-
+    .PersistKeysToFileSystem(new DirectoryInfo("/app/dataprotection-keys"));
 
 
 var app = builder.Build();
