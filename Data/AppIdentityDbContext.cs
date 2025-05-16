@@ -34,6 +34,17 @@ namespace SnapSaves.Data
             builder.Entity<IdentityUserToken<string>>().ToTable("aspnetusertokens");
             builder.Entity<IdentityRoleClaim<string>>().ToTable("aspnetroleclaims");
 
+            builder.Entity<LtiUser>().ToTable("ltiusers");
+            builder.Entity<Course>().ToTable("courses");
+            builder.Entity<UserCourse>().ToTable("usercourses");
+            builder.Entity<CourseTemplate>().ToTable("coursetemplates");
+            builder.Entity<Template>().ToTable("templates");
+            builder.Entity<Permission>().ToTable("permissions");
+            builder.Entity<Organization>().ToTable("organizations");
+            builder.Entity<RolePermission>().ToTable("rolepermissions");
+            builder.Entity<Instructions>().ToTable("instructions");
+
+
             // Configure Template
             builder.Entity<Template>(entity =>
             {
