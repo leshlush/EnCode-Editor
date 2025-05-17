@@ -51,7 +51,7 @@
                 request.onupgradeneeded = (event) => {
                     const db = event.target.result;
                     if (!db.objectStoreNames.contains("files")) {
-                        db.createObjectStore("files", { keyPath: "path" });
+                        db.createObjectStore("files");
                         console.log("Object store 'files' created.");
                     }
                 };
