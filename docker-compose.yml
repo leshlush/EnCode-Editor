@@ -4,6 +4,10 @@ services:
     build: .
     ports:
       - "8080:8080"
+    environment:
+        - ConnectionStrings__MySQLIdentity=${ConnectionStrings__MySQLIdentity}
+        - MongoDbSettings__ConnectionString=${MongoDbSettings__ConnectionString}
+        - MongoDbSettings__DatabaseName=${MongoDbSettings__DatabaseName}
     volumes:
       - dataprotection-keys:/app/dataprotection-keys
     
