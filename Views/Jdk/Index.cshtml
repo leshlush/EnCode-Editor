@@ -1,4 +1,4 @@
-﻿@{
+﻿﻿@{
     Layout = null;
     ViewData["Title"] = "CheerpJ Test";
     var projectJson = ViewData["ProjectJson"] as string;
@@ -25,6 +25,7 @@
             console.log("Initializing CheerpJ...");
             await cheerpjInit(initParams);
             console.log("CheerpJ initialized successfully.");
+            await cheerpjRunJar("/app/CreateFileCheerpJ.jar");
 
             // Parse the project JSON
             const project = @Html.Raw(projectJson);
@@ -51,7 +52,7 @@
                 request.onupgradeneeded = (event) => {
                     const db = event.target.result;
                     if (!db.objectStoreNames.contains("files")) {
-                        db.createObjectStore("files");
+                        db.createObjectStore("files", { keyPath: "path" });
                         console.log("Object store 'files' created.");
                     }
                 };
