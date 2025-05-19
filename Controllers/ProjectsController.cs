@@ -10,10 +10,11 @@ namespace SnapSaves.Controllers
     public class ProjectsController : Controller
     {
         private readonly MongoDbContext _dbContext;
-
-        public ProjectsController(MongoDbContext dbContext)
+        private readonly AppIdentityDbContext _identityDbContext;
+        public ProjectsController(MongoDbContext dbContext, AppIdentityDbContext identityDbContext)
         {
             _dbContext = dbContext;
+            _identityDbContext = identityDbContext;
         }
 
 
@@ -73,6 +74,46 @@ namespace SnapSaves.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateFromUniversalTemplate(string templateId)
+        {
+            if (!User.Identity?.IsAuthenticated ?? false)
+                return Unauthorized("User is not authenticated");
+
+            var userId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("MongoUserId claim is missing");
+
+            // Fetch the universal template project from MongoDB
+            var templateProject = await _dbContext.TemplateProjects.Find(t => t.Id == templateId).FirstOrDefaultAsync();
+            if (templateProject == null)
+                return NotFound("Template project not found");
+
+            // Fetch the Template from SQL to get the InstructionsId
+            var template = _identityDbContext.Templates.FirstOrDefault(t => t.MongoId == templateId);
+
+            // Create a copy of the template for the user, including InstructionsId if present
+            var newProject = new Project
+            {
+                Name = templateProject.Name + " (Copy)",
+                UserId = userId,
+                CreatedAt = DateTime.UtcNow,
+                LastModified = DateTime.UtcNow,
+                Files = templateProject.Files.Select(f => new ProjectFile
+                {
+                    Path = f.Path,
+                    Content = f.Content,
+                    IsDirectory = f.IsDirectory
+                }).ToList(),
+                InstructionsId = template?.InstructionsId // Copy instructions if available
+            };
+
+            await _dbContext.Projects.InsertOneAsync(newProject);
+
+            return RedirectToAction(nameof(Index));
+        }
 
 
 
