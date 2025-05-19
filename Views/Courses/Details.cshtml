@@ -21,6 +21,11 @@
             Templates
         </button>
     </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="universalTemplates-tab" data-bs-toggle="tab" data-bs-target="#universalTemplates" type="button" role="tab" aria-controls="universalTemplates" aria-selected="false">
+            Universal Templates
+        </button>
+    </li>
 </ul>
 
 <!-- Tab content -->
@@ -28,13 +33,13 @@
     @if (await PermissionHelper.UserHasPermissionAsync(await UserManager.GetUserAsync(User), "ViewStudents"))
     {
         <div class="tab-pane fade show active" id="students" role="tabpanel" aria-labelledby="students-tab">
-            <!-- Render the CourseStudents partial view -->
             @await Html.PartialAsync("_UserCourse", Model.UserCourses)
         </div>
     }
     <div class="tab-pane fade @(!(await PermissionHelper.UserHasPermissionAsync(await UserManager.GetUserAsync(User), "ViewStudents")) ? "show active" : "")" id="templates" role="tabpanel" aria-labelledby="templates-tab">
-        <!-- Render the CourseTemplates partial view -->
         @await Html.PartialAsync("_CourseTemplate", Model.CourseTemplates)
     </div>
+    <div class="tab-pane fade" id="universalTemplates" role="tabpanel" aria-labelledby="universalTemplates-tab">
+        @Html.Partial("_UniversalTemplates", Model.UniversalTemplates)
+    </div>
 </div>
-

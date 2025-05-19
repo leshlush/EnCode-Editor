@@ -1,0 +1,18 @@
+﻿   @model IEnumerable<SnapSaves.Models.Template>
+
+
+@if (Model != null && Model.Any())
+{
+    <ul>
+        @foreach (var template in Model)
+        {
+            <li>
+                <strong>@template.Name</strong>: @template.Description
+            </li>
+        }
+    </ul>
+}
+else
+{
+    <p>No universal templates available.</p>
+}
