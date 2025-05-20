@@ -6,11 +6,9 @@
         @foreach (var template in Model)
         {
             <li>
-                <strong>@template.Name</strong>: @template.Description
-                <form asp-controller="Projects" asp-action="CreateFromUniversalTemplate" asp-route-templateId="@template.MongoId" method="post" style="display:inline;">
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-primary btn-sm">Create Project</button>
-                </form>
+                <a href="#" class="template-link" data-template-id="@template.Id">
+                    <strong>@template.Name</strong>
+                </a>
             </li>
         }
     </ul>
