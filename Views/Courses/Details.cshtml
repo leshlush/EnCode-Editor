@@ -38,16 +38,24 @@
         </div>
     }
     <div class="tab-pane fade @(!(await PermissionHelper.UserHasPermissionAsync(await UserManager.GetUserAsync(User), "ViewStudents")) ? "show active" : "")" id="templates" role="tabpanel" aria-labelledby="templates-tab">
-        <!-- Render the CourseTemplates partial view -->
-        @* Example: List templates with modal links *@
-        <ul>
+        <!-- Render the CourseTemplates as cards -->
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mt-2">
             @foreach (var ct in Model.CourseTemplates)
             {
-                <li>
-                    <a href="#" class="template-link" data-template-id="@ct.TemplateId">@ct.Template.Name</a>
-                </li>
+                <div class="col">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <a href="#" class="template-link text-decoration-none" data-template-id="@ct.TemplateId">
+                                    @ct.Template.Name
+                                </a>
+                            </h5>
+                            <p class="card-text text-muted">@ct.Template.Description</p>
+                        </div>
+                    </div>
+                </div>
             }
-        </ul>
+        </div>
     </div>
     <div class="tab-pane fade" id="universalTemplates" role="tabpanel" aria-labelledby="universalTemplates-tab">
         @Html.Partial("_UniversalTemplates", Model.UniversalTemplates)
@@ -58,11 +66,11 @@
 <div class="modal fade" id="templateDetailsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title">Template Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body" id="templateDetailsContent">
+            <div class="modal-body p-4" id="templateDetailsContent">
                 <!-- AJAX-loaded content goes here -->
             </div>
         </div>
