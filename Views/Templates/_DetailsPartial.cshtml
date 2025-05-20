@@ -1,0 +1,39 @@
+﻿@model SnapSaves.Models.ViewModels.TemplateDetailsViewModel
+
+<div>
+    <h4>@Model.Template.Name</h4>
+    <p>@Model.Template.Description</p>
+
+    <h5>Your Projects from this Template</h5>
+    @if (Model.UserProjects.Any())
+    {
+        <ul>
+            @foreach (var project in Model.UserProjects)
+            {
+                <li>
+                    <a asp-controller="SnapCode"
+                       asp-action="Index"
+                       asp-route-projectId="@project.Id"
+                       asp-route-userId="@User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value">
+                        @project.Name
+                    </a>
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p>No projects yet.</p>
+    }
+
+    <form id="createProjectForm" asp-controller="Projects" asp-action="CreateFromTemplateWithName" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="templateId" value="@Model.Template.Id" />
+        <div class="mb-2">
+            <label for="projectName">Project Name:</label>
+            <input type="text" name="projectName" id="projectName" class="form-control" required />
+        </div>
+        <button type="submit" class="btn btn-primary">Create Project</button>
+    </form>
+    <div id="createProjectResult"></div>
+</div>

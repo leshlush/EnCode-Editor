@@ -11,19 +11,36 @@ namespace SnapSaves.Data
         public AppIdentityDbContext(DbContextOptions<AppIdentityDbContext> options)
             : base(options) { }
 
-        public DbSet<LtiUser> LtiUsers { get; set; } 
+        public DbSet<LtiUser> LtiUsers { get; set; }
         public DbSet<Course> Courses { get; set; }
-        public DbSet<UserCourse> UserCourses { get; set; } 
-        public DbSet<CourseTemplate> CourseTemplates {  get; set; } 
-        public DbSet<Template> Templates { get; set; } 
+        public DbSet<UserCourse> UserCourses { get; set; }
+        public DbSet<CourseTemplate> CourseTemplates { get; set; }
+        public DbSet<Template> Templates { get; set; }
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<Organization> Organizations { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
         public DbSet<Instructions> Instructions { get; set; }
+        public DbSet<TemplateProject> TemplateProjects { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            // TemplateProject: Each TemplateProject references one Template (many-to-one)
+            builder.Entity<TemplateProject>(entity =>
+            {
+                entity.ToTable("templateprojects");
+                entity.HasKey(tp => tp.Id);
+
+                entity.Property(tp => tp.ProjectMongoId)
+                    .IsRequired()
+                    .HasColumnType("longtext");
+
+                entity.HasOne(tp => tp.Template)
+                    .WithMany() // If you add a collection to Template: .WithMany(t => t.TemplateProjects)
+                    .HasForeignKey(tp => tp.TemplateId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
 
             // Force Identity tables to lowercase
             builder.Entity<AppUser>().ToTable("aspnetusers");
@@ -43,7 +60,6 @@ namespace SnapSaves.Data
             builder.Entity<Organization>().ToTable("organizations");
             builder.Entity<RolePermission>().ToTable("rolepermissions");
             builder.Entity<Instructions>().ToTable("instructions");
-
 
             // Configure Template
             builder.Entity<Template>(entity =>
@@ -108,22 +124,6 @@ namespace SnapSaves.Data
                 .WithMany(p => p.RolePermissions)
                 .HasForeignKey(rp => rp.PermissionId);
 
-            // Configure CourseTemplate relationships
-            builder.Entity<CourseTemplate>()
-                .HasKey(ct => new { ct.CourseId, ct.TemplateId });
-
-            builder.Entity<CourseTemplate>()
-                .HasOne(ct => ct.Course)
-                .WithMany(c => c.CourseTemplates)
-                .HasForeignKey(ct => ct.CourseId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            builder.Entity<CourseTemplate>()
-                .HasOne(ct => ct.Template)
-                .WithMany(t => t.CourseTemplates)
-                .HasForeignKey(ct => ct.TemplateId)
-                .OnDelete(DeleteBehavior.Cascade);
-
             // Configure UserCourse relationships
             builder.Entity<UserCourse>()
                 .HasKey(uc => new { uc.UserId, uc.CourseId });
@@ -149,10 +149,5 @@ namespace SnapSaves.Data
 
             // Additional configurations for other entities can go here...
         }
-
-
-
-
-
     }
 }

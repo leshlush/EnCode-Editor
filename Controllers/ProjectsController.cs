@@ -5,6 +5,7 @@ using MongoDB.Driver;
 using SnapSaves.Data;
 using SnapSaves.Helpers;
 using SnapSaves.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace SnapSaves.Controllers
 {
@@ -12,7 +13,7 @@ namespace SnapSaves.Controllers
     {
         private readonly MongoDbContext _dbContext;
         private readonly AppIdentityDbContext _identityDbContext;
-        private readonly ProjectHelper _projectHelper;;
+        private readonly ProjectHelper _projectHelper;
         public ProjectsController(MongoDbContext dbContext, AppIdentityDbContext identityDbContext,
                 ProjectHelper projectHelper)
         {
@@ -225,6 +226,68 @@ namespace SnapSaves.Controllers
 
             return View(project);
         }
+
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateFromTemplateWithName(int templateId, string projectName)
+        {
+            var userId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("MongoUserId claim is missing");
+
+            var template = _identityDbContext.Templates.FirstOrDefault(t => t.Id == templateId);
+            if (template == null)
+                return NotFound("Template not found");
+
+            // Use ProjectHelper to create the project with a custom name
+            var result = await _projectHelper.CreateProjectFromTemplateAsync(template, userId, projectName);
+            if (!result.Success || result.Project == null)
+                return BadRequest(result.ErrorMessage);
+
+            // Insert into TemplateProjects table
+            var templateProject = new TemplateProject
+            {
+                TemplateId = templateId,
+                ProjectMongoId = result.Project.Id
+            };
+            _identityDbContext.TemplateProjects.Add(templateProject);
+            await _identityDbContext.SaveChangesAsync();
+
+            // Optionally, return a partial or JSON for AJAX
+            return Ok();
+        }
+
+        public async Task<(bool Success, string ErrorMessage, Project? Project)> CreateProjectFromTemplateAsync(
+    Template template, string userId, string? customName = null)
+        {
+            // Fetch the template project from MongoDB
+            var templateProject = await _dbContext.TemplateProjects.Find(t => t.Id == template.MongoId).FirstOrDefaultAsync();
+            if (templateProject == null)
+                return (false, "Template project not found in MongoDB.", null);
+
+            // Create a new project for the user
+            var newProject = new Project
+            {
+                Name = string.IsNullOrWhiteSpace(customName) ? template.Name + " (Copy)" : customName,
+                UserId = userId,
+                CreatedAt = DateTime.UtcNow,
+                LastModified = DateTime.UtcNow,
+                Files = templateProject.Files.Select(f => new ProjectFile
+                {
+                    Path = f.Path,
+                    Content = f.Content,
+                    IsDirectory = f.IsDirectory
+                }).ToList(),
+                InstructionsId = template.InstructionsId
+            };
+
+            await _dbContext.Projects.InsertOneAsync(newProject);
+
+            return (true, "", newProject);
+        }
+
+
 
     }
 }

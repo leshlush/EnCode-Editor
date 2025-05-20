@@ -1,4 +1,5 @@
 ﻿@model SnapSaves.Models.Course
+
 @using Microsoft.AspNetCore.Identity
 @inject UserManager<SnapSaves.Auth.AppUser> UserManager
 @inject SnapSaves.Helpers.PermissionHelper PermissionHelper
@@ -6,7 +7,7 @@
 <h1>@Model.Name</h1>
 <p>@Model.Description</p>
 
-<!-- Tab navigation -->
+<!-- Tab navigation (unchanged) -->
 <ul class="nav nav-tabs" id="courseDetailsTabs" role="tablist">
     @if (await PermissionHelper.UserHasPermissionAsync(await UserManager.GetUserAsync(User), "ViewStudents"))
     {
@@ -37,9 +38,63 @@
         </div>
     }
     <div class="tab-pane fade @(!(await PermissionHelper.UserHasPermissionAsync(await UserManager.GetUserAsync(User), "ViewStudents")) ? "show active" : "")" id="templates" role="tabpanel" aria-labelledby="templates-tab">
-        @await Html.PartialAsync("_CourseTemplate", Model.CourseTemplates)
+        <!-- Render the CourseTemplates partial view -->
+        @* Example: List templates with modal links *@
+        <ul>
+            @foreach (var ct in Model.CourseTemplates)
+            {
+                <li>
+                    <a href="#" class="template-link" data-template-id="@ct.TemplateId">@ct.Template.Name</a>
+                </li>
+            }
+        </ul>
     </div>
     <div class="tab-pane fade" id="universalTemplates" role="tabpanel" aria-labelledby="universalTemplates-tab">
         @Html.Partial("_UniversalTemplates", Model.UniversalTemplates)
     </div>
 </div>
+
+<!-- Bootstrap Modal for Template Details -->
+<div class="modal fade" id="templateDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Template Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="templateDetailsContent">
+                <!-- AJAX-loaded content goes here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).on('click', '.template-link', function(e) {
+            e.preventDefault();
+            var templateId = $(this).data('template-id');
+            $('#templateDetailsContent').html('<div class="text-center">Loading...</div>');
+            var modal = new bootstrap.Modal(document.getElementById('templateDetailsModal'));
+            modal.show();
+            $.get('/Templates/DetailsPartial', { id: templateId }, function(data) {
+                $('#templateDetailsContent').html(data);
+            });
+        });
+
+        $(document).on('submit', '#createProjectForm', function(e) {
+            e.preventDefault();
+            var $form = $(this);
+            $.post($form.attr('action'), $form.serialize(), function() {
+                $('#createProjectResult').html('<div class="alert alert-success">Project created!</div>');
+                // Optionally reload the partial to show the new project
+                var templateId = $form.find('input[name="templateId"]').val();
+                $.get('/Templates/DetailsPartial', { id: templateId }, function(data) {
+                    $('#templateDetailsContent').html(data);
+                });
+            }).fail(function(xhr) {
+                $('#createProjectResult').html('<div class="alert alert-danger">' + xhr.responseText + '</div>');
+            });
+        });
+    </script>
+}
