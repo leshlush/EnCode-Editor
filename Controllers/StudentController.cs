@@ -43,12 +43,15 @@ public class StudentsController : Controller
             .Select(uc => uc.CourseId)
             .ToListAsync();
 
-        // Get all students in the user's courses
+        // Get all users in the courses who have the "Student" role
         var students = await _context.UserCourses
             .Where(uc => userCourses.Contains(uc.CourseId))
             .Include(uc => uc.User)
             .Select(uc => uc.User)
+            .Where(u => _context.UserRoles
+                .Any(ur => ur.UserId == u.Id && _context.Roles.Any(r => r.Id == ur.RoleId && r.Name == "Student")))
             .ToListAsync();
+
 
         return View(students);
     }
