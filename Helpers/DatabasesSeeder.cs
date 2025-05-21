@@ -332,6 +332,14 @@ namespace SnapSaves.Helpers
                 return;
             }
 
+            // 1. Get an admin user to use as the owner of the seed projects
+            var adminUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == "admin@encodecreate.com");
+            if (adminUser == null)
+            {
+                Console.WriteLine("Admin user not found. Cannot seed templates.");
+                return;
+            }
+
             var templates = new List<(string Name, string Description)>
     {
         ("Template 1", "Description for Template 1"),
@@ -366,12 +374,13 @@ namespace SnapSaves.Helpers
                     continue;
                 }
 
-                // Create a new project object
+                // 2. Set the UserId to the admin's MongoUserId
                 var project = new Project
                 {
                     Name = templates[i].Name,
                     CreatedAt = DateTime.UtcNow,
                     LastModified = DateTime.UtcNow,
+                    UserId = adminUser.MongoUserId, // <-- This is the fix!
                     Files = new List<ProjectFile>
             {
                 new ProjectFile
@@ -401,6 +410,7 @@ namespace SnapSaves.Helpers
                 }
             }
         }
+
 
 
     }
