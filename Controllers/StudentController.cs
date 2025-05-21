@@ -5,6 +5,7 @@ using SnapSaves.Auth;
 using SnapSaves.Data;
 using SnapSaves.Helpers;
 using Microsoft.EntityFrameworkCore;
+using MongoDB.Driver;
 
 [Authorize]
 public class StudentsController : Controller
@@ -12,12 +13,15 @@ public class StudentsController : Controller
     private readonly AppIdentityDbContext _context;
     private readonly UserManager<AppUser> _userManager;
     private readonly PermissionHelper _permissionHelper;
+    private readonly MongoDbContext _mongoDbContext;
 
-    public StudentsController(AppIdentityDbContext context, UserManager<AppUser> userManager, PermissionHelper permissionHelper)
+    public StudentsController(AppIdentityDbContext context, UserManager<AppUser> userManager, 
+        PermissionHelper permissionHelper, MongoDbContext mongoDbContext)
     {
         _context = context;
         _userManager = userManager;
         _permissionHelper = permissionHelper;
+        _mongoDbContext = mongoDbContext;
     }
 
     [HttpGet]
@@ -55,5 +59,24 @@ public class StudentsController : Controller
 
         return View(students);
     }
+
+    [Authorize]
+    [HttpGet]
+    public async Task<IActionResult> StudentProjectsPartial(string userId, int courseId)
+    {
+        // Get all ProjectRecords for this user and course
+        var projectMongoIds = await _context.ProjectRecords
+            .Where(pr => pr.UserId == userId && pr.CourseId == courseId)
+            .Select(pr => pr.MongoId)
+            .ToListAsync();
+
+        // Fetch projects from MongoDB
+        var userProjects = await _mongoDbContext.Projects
+            .Find(p => projectMongoIds.Contains(p.Id))
+            .ToListAsync();
+
+        return PartialView("_StudentProjectsPartial", userProjects);
+    }
+
 
 }

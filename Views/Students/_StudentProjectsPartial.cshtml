@@ -1,0 +1,17 @@
+﻿@model List<SnapSaves.Models.Project>
+
+@if (Model.Any())
+{
+    <ul>
+        @foreach (var project in Model)
+        {
+            <li>
+                <strong>@project.Name</strong> (Created: @project.CreatedAt.ToShortDateString())
+            </li>
+        }
+    </ul>
+}
+else
+{
+    <p>No projects for this student in this course.</p>
+}

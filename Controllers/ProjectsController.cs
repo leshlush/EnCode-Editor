@@ -276,7 +276,7 @@ namespace SnapSaves.Controllers
             {
                 MongoId = result.Project.Id,
                 UserId = userId,
-                CourseId = courseId, // Use the courseId from the form
+                CourseId = courseId,
                 CreatedAt = result.Project.CreatedAt
             };
             _identityDbContext.ProjectRecords.Add(projectRecord);

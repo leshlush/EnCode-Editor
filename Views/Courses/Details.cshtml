@@ -61,7 +61,11 @@
         </div>
     </div>
     <div class="tab-pane fade" id="universalTemplates" role="tabpanel" aria-labelledby="universalTemplates-tab">
-        @Html.Partial("_UniversalTemplates", Model.UniversalTemplates)
+        @{
+            var viewData = new ViewDataDictionary(ViewData) { { "CourseId", Model.Id } };
+        }
+        <partial name="_UniversalTemplates" model="Model.UniversalTemplates" view-data="viewData" />
+
     </div>
 </div>
 
@@ -80,12 +84,28 @@
     </div>
 </div>
 
+<!--- Bootstrap Modal for Student projects -->
+<div class="modal fade" id="studentProjectsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Student Projects</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4" id="studentProjectsContent">
+                <!-- AJAX-loaded content goes here -->
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
             $(document).on('click', '.template-link', function(e) {
             e.preventDefault();
             var templateId = $(this).data('template-id');
             var courseId = $(this).data('course-id'); // Add this!
+			console.log("on click, CourseId: " + courseId);
             $('#templateDetailsContent').html('<div class="text-center">Loading...</div>');
             var modal = new bootstrap.Modal(document.getElementById('templateDetailsModal'));
             modal.show();
@@ -93,6 +113,17 @@
                 $('#templateDetailsContent').html(data);
             });
         });
+
+            $(document).on('click', '.student-projects-link', function(e) {
+            e.preventDefault();
+            var userId = $(this).data('user-id');
+            var courseId = $(this).data('course-id');
+            $('#studentProjectsContent').html('<div class="text-center">Loading...</div>');
+            $.get('/Students/StudentProjectsPartial', { userId: userId, courseId: courseId }, function(data) {
+                $('#studentProjectsContent').html(data);
+            });
+        });
+
 
 
         $(document).on('submit', '#createProjectForm', function(e) {
@@ -102,7 +133,9 @@
                 $('#createProjectResult').html('<div class="alert alert-success">Project created!</div>');
                 // Optionally reload the partial to show the new project
                 var templateId = $form.find('input[name="templateId"]').val();
-                $.get('/Templates/DetailsPartial', { id: templateId }, function(data) {
+                var courseId = $form.find('input[name="courseId"]').val();
+				console.log("on submit, CourseId: " + courseId);
+                $.get('/Templates/DetailsPartial', { id: templateId, courseId: courseId }, function(data) {
                     $('#templateDetailsContent').html(data);
                 });
             }).fail(function(xhr) {

@@ -4,6 +4,15 @@
 <ul>
     @foreach (var userCourse in Model)
     {
-        <li>@userCourse.User.FirstName @userCourse.User.LastName (@userCourse.User.Email)</li>
+        <li>
+            <a href="#" class="student-projects-link"
+               data-user-id="@userCourse.User.MongoUserId"
+               data-course-id="@userCourse.CourseId"
+               data-bs-toggle="modal"
+               data-bs-target="#studentProjectsModal">
+                @userCourse.User.FirstName @userCourse.User.LastName
+            </a>
+        </li>
     }
+</ul>
 </ul>
