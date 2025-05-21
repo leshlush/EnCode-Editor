@@ -15,8 +15,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Configure MySQL Identity
 var mysqlConnection = builder.Configuration.GetConnectionString("MySQLIdentity");
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 104_857_600; // 100 MB
+});
 
-Console.WriteLine($"[DEBUG] MySQL Connection String: {mysqlConnection}");
 
 builder.Services.AddDbContext<AppIdentityDbContext>(options =>
     options.UseMySql(
