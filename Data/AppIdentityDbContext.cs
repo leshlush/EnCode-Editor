@@ -21,6 +21,7 @@ namespace SnapSaves.Data
         public DbSet<RolePermission> RolePermissions { get; set; }
         public DbSet<Instructions> Instructions { get; set; }
         public DbSet<TemplateProject> TemplateProjects { get; set; }
+        public DbSet<ProjectRecord> ProjectRecords { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -60,6 +61,7 @@ namespace SnapSaves.Data
             builder.Entity<Organization>().ToTable("organizations");
             builder.Entity<RolePermission>().ToTable("rolepermissions");
             builder.Entity<Instructions>().ToTable("instructions");
+            builder.Entity<ProjectRecord>().ToTable("projectrecords");
 
             // Configure Template
             builder.Entity<Template>(entity =>

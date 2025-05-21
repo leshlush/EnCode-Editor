@@ -19,7 +19,7 @@ namespace SnapSaves.Helpers
 
         public async Task<(bool Success, string ErrorMessage)> CreateNewProjectTemplateAsync(Project project, int courseId)
         {
-            IClientSessionHandle? session = null; // Nullable session for safe handling
+            IClientSessionHandle? session = null;
             bool isReplicaSet = false;
 
             try
@@ -54,7 +54,18 @@ namespace SnapSaves.Helpers
                     return (false, "Failed to retrieve MongoId for the new project.");
                 }
 
-                // Step 3: Create a template from the newly created project
+                // Step 3: Insert ProjectRecord in SQL (only after Mongo insert and MongoId is valid)
+                var projectRecord = new ProjectRecord
+                {
+                    MongoId = mongoId,
+                    UserId = project.UserId,
+                    CourseId = courseId,
+                    CreatedAt = project.CreatedAt
+                };
+                _dbContext.ProjectRecords.Add(projectRecord);
+                await _dbContext.SaveChangesAsync();
+
+                // Step 4: Create a template from the newly created project
                 var result = await CreateTemplateFromProjectAsync(mongoId, courseId, session, isReplicaSet);
 
                 if (isReplicaSet && session != null)
@@ -85,7 +96,8 @@ namespace SnapSaves.Helpers
             }
         }
 
-public async Task<(bool Success, string ErrorMessage)> CreateTemplateFromProjectAsync(
+
+        public async Task<(bool Success, string ErrorMessage)> CreateTemplateFromProjectAsync(
      string projectId,
      int courseId,
      IClientSessionHandle? session,

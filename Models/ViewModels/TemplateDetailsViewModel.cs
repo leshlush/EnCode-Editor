@@ -7,5 +7,6 @@ namespace SnapSaves.Models.ViewModels
     {
         public Template Template { get; set; }
         public List<Project> UserProjects { get; set; } = new();
+        public int CourseId { get; set; }
     }
 }

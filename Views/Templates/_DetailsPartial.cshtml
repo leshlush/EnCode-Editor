@@ -29,6 +29,7 @@
     <form id="createProjectForm" asp-controller="Projects" asp-action="CreateFromTemplateWithName" method="post">
         @Html.AntiForgeryToken()
         <input type="hidden" name="templateId" value="@Model.Template.Id" />
+        <input type="hidden" name="courseId" value="@Model.CourseId" />
         <div class="mb-2">
             <label for="projectName">Project Name:</label>
             <input type="text" name="projectName" id="projectName" class="form-control" required />

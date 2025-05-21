@@ -76,8 +76,18 @@ namespace SnapSaves.Controllers
             if (result.DeletedCount == 0)
                 return NotFound("Project not found or you do not have permission to delete it.");
 
+            // Remove the associated ProjectRecord from MySQL
+            var projectRecord = await _identityDbContext.ProjectRecords
+                .FirstOrDefaultAsync(r => r.MongoId == id && r.UserId == userId);
+            if (projectRecord != null)
+            {
+                _identityDbContext.ProjectRecords.Remove(projectRecord);
+                await _identityDbContext.SaveChangesAsync();
+            }
+
             return RedirectToAction(nameof(Index));
         }
+
 
         [Authorize]
         [HttpPost]
@@ -141,6 +151,15 @@ namespace SnapSaves.Controllers
             };
 
             await _dbContext.Projects.InsertOneAsync(newProject);
+            var projectRecord = new ProjectRecord
+            {
+                MongoId = newProject.Id,
+                UserId = userId,
+                CourseId = null, // Set if you have a course context
+                CreatedAt = newProject.CreatedAt
+            };
+            _identityDbContext.ProjectRecords.Add(projectRecord);
+            await _identityDbContext.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
@@ -184,7 +203,15 @@ namespace SnapSaves.Controllers
 
             // Insert the new project into the user's projects collection
             await _dbContext.Projects.InsertOneAsync(newProject);
-
+            var projectRecord = new ProjectRecord
+            {
+                MongoId = newProject.Id,
+                UserId = userId,
+                CourseId = null, // Set if you have a course context
+                CreatedAt = newProject.CreatedAt
+            };
+            _identityDbContext.ProjectRecords.Add(projectRecord);
+            await _identityDbContext.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
@@ -230,7 +257,7 @@ namespace SnapSaves.Controllers
         [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateFromTemplateWithName(int templateId, string projectName)
+        public async Task<IActionResult> CreateFromTemplateWithName(int templateId, int courseId, string projectName)
         {
             var userId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
             if (string.IsNullOrEmpty(userId))
@@ -245,6 +272,15 @@ namespace SnapSaves.Controllers
             if (!result.Success || result.Project == null)
                 return BadRequest(result.ErrorMessage);
 
+            var projectRecord = new ProjectRecord
+            {
+                MongoId = result.Project.Id,
+                UserId = userId,
+                CourseId = courseId, // Use the courseId from the form
+                CreatedAt = result.Project.CreatedAt
+            };
+            _identityDbContext.ProjectRecords.Add(projectRecord);
+
             // Insert into TemplateProjects table
             var templateProject = new TemplateProject
             {
@@ -257,6 +293,7 @@ namespace SnapSaves.Controllers
             // Optionally, return a partial or JSON for AJAX
             return Ok();
         }
+
 
         public async Task<(bool Success, string ErrorMessage, Project? Project)> CreateProjectFromTemplateAsync(
     Template template, string userId, string? customName = null)

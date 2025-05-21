@@ -37,7 +37,7 @@ namespace SnapSaves.Controllers
 
         [Authorize]
         [HttpGet]
-        public async Task<IActionResult> DetailsPartial(int id)
+        public async Task<IActionResult> DetailsPartial(int id, int courseId)
         {
             var template = await _dbContext.Templates.FindAsync(id);
             if (template == null)
@@ -47,21 +47,28 @@ namespace SnapSaves.Controllers
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
-            // Find all TemplateProjects for this template
+            // 1. Find all ProjectRecords for this user, course, and template
             var templateProjectMongoIds = await _dbContext.TemplateProjects
                 .Where(tp => tp.TemplateId == id)
                 .Select(tp => tp.ProjectMongoId)
                 .ToListAsync();
 
-            // Find all Projects in MongoDB for this user and these template projects
-            var userProjects = await _mongoDbContext.Projects
-                .Find(p => p.UserId == userId && templateProjectMongoIds.Contains(p.Id))
+            var projectMongoIds = await _dbContext.ProjectRecords
+                .Where(pr => pr.UserId == userId && pr.CourseId == courseId && templateProjectMongoIds.Contains(pr.MongoId))
+                .Select(pr => pr.MongoId)
                 .ToListAsync();
+
+            // 2. Fetch only those projects from MongoDB
+            var userProjects = await _mongoDbContext.Projects
+                .Find(p => projectMongoIds.Contains(p.Id))
+                .ToListAsync();
+
 
             var viewModel = new TemplateDetailsViewModel
             {
                 Template = template,
-                UserProjects = userProjects
+                UserProjects = userProjects,
+                CourseId = courseId
             };
 
             return PartialView("_DetailsPartial", viewModel);
