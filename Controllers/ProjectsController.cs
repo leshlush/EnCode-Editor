@@ -167,53 +167,25 @@ namespace SnapSaves.Controllers
         public async Task<IActionResult> CopyTemplate(string templateId)
         {
             if (!User.Identity?.IsAuthenticated ?? false)
-            {
                 return Unauthorized("User is not authenticated");
-            }
 
             var userId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
-
             if (string.IsNullOrEmpty(userId))
-            {
                 return Unauthorized("MongoUserId claim is missing");
-            }
 
-            // Fetch the template project
-            var template = await _dbContext.TemplateProjects.Find(t => t.Id == templateId).FirstOrDefaultAsync();
-
+            // Fetch the Template from SQL to get the InstructionsId and MongoId
+            var template = _identityDbContext.Templates.FirstOrDefault(t => t.MongoId == templateId);
             if (template == null)
-            {
-                return NotFound("Template project not found");
-            }
+                return NotFound("Template not found");
 
-            // Create a copy of the template for the user
-            var newProject = new Project
-            {
-                Name = template.Name + " (Copy)",
-                UserId = userId,
-                CreatedAt = DateTime.UtcNow,
-                LastModified = DateTime.UtcNow,
-                Files = template.Files.Select(f => new ProjectFile
-                {
-                    Path = f.Path,
-                    Content = f.Content,
-                    IsDirectory = f.IsDirectory
-                }).ToList()
-            };
+            var result = await _projectHelper.CreateProjectFromTemplateAsync(template, userId);
+            if (!result.Success)
+                return BadRequest(result.ErrorMessage);
 
-            // Insert the new project into the user's projects collection
-            await _dbContext.Projects.InsertOneAsync(newProject);
-            var projectRecord = new ProjectRecord
-            {
-                MongoId = newProject.Id,
-                UserId = userId,
-                CourseId = null, // Set if you have a course context
-                CreatedAt = newProject.CreatedAt
-            };
-            _identityDbContext.ProjectRecords.Add(projectRecord);
-            await _identityDbContext.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
+
+
 
 
         [HttpGet]
@@ -267,27 +239,54 @@ namespace SnapSaves.Controllers
             if (template == null)
                 return NotFound("Template not found");
 
-            // Use ProjectHelper to create the project with a custom name
-            var result = await _projectHelper.CreateProjectFromTemplateAsync(template, userId, projectName);
-            if (!result.Success || result.Project == null)
-                return BadRequest(result.ErrorMessage);
+            // Fetch the template project from MongoDB
+            var templateProject = await _dbContext.TemplateProjects.Find(t => t.Id == template.MongoId).FirstOrDefaultAsync();
+            if (templateProject == null)
+                return BadRequest("Template project not found in MongoDB.");
 
+            // Create a new project for the user (to get a new project ID)
+            var newProject = new Project
+            {
+                Name = projectName,
+                UserId = userId,
+                CreatedAt = DateTime.UtcNow,
+                LastModified = DateTime.UtcNow,
+                Files = new List<ProjectFile>(), // Will fill after insert
+                InstructionsId = template.InstructionsId
+            };
+
+            // Insert to get the new project ID
+            await _dbContext.Projects.InsertOneAsync(newProject);
+
+            // Now update file paths to use the new project ID
+            newProject.Files = templateProject.Files.Select(f => new ProjectFile
+            {
+                Path = ReplaceProjectIdInPath(f.Path, templateProject.Id, newProject.Id),
+                Content = f.Content,
+                IsDirectory = f.IsDirectory
+            }).ToList();
+
+            // Update the project with the new files
+            await _dbContext.Projects.ReplaceOneAsync(p => p.Id == newProject.Id, newProject);
+
+            // Add project record in SQL
             var projectRecord = new ProjectRecord
             {
-                MongoId = result.Project.Id,
+                MongoId = newProject.Id,
                 UserId = userId,
                 CourseId = courseId,
-                CreatedAt = result.Project.CreatedAt
+                CreatedAt = newProject.CreatedAt
             };
             _identityDbContext.ProjectRecords.Add(projectRecord);
 
-            // Insert into TemplateProjects table
-            var templateProject = new TemplateProject
+            // Insert into TemplateProjects table (SQL, not Mongo)
+            var templateProjectRecord = new TemplateProject
             {
                 TemplateId = templateId,
-                ProjectMongoId = result.Project.Id
+                ProjectMongoId = newProject.Id
             };
-            _identityDbContext.TemplateProjects.Add(templateProject);
+            _identityDbContext.TemplateProjects.Add(templateProjectRecord);
+
             await _identityDbContext.SaveChangesAsync();
 
             // Optionally, return a partial or JSON for AJAX
@@ -310,20 +309,33 @@ namespace SnapSaves.Controllers
                 UserId = userId,
                 CreatedAt = DateTime.UtcNow,
                 LastModified = DateTime.UtcNow,
-                Files = templateProject.Files.Select(f => new ProjectFile
-                {
-                    Path = f.Path,
-                    Content = f.Content,
-                    IsDirectory = f.IsDirectory
-                }).ToList(),
+                Files = new List<ProjectFile>(),
                 InstructionsId = template.InstructionsId
             };
 
             await _dbContext.Projects.InsertOneAsync(newProject);
 
+            newProject.Files = templateProject.Files.Select(f => new ProjectFile
+            {
+                Path = ReplaceProjectIdInPath(f.Path, templateProject.Id, newProject.Id),
+                Content = f.Content,
+                IsDirectory = f.IsDirectory
+            }).ToList();
+
             return (true, "", newProject);
         }
 
+        private static string ReplaceProjectIdInPath(string path, string oldId, string newId)
+        {
+            if (string.IsNullOrEmpty(path) || string.IsNullOrEmpty(oldId) || string.IsNullOrEmpty(newId))
+                return path;
+            if (path == $"/{oldId}")
+                return $"/{newId}";
+            if (path.StartsWith($"/{oldId}/"))
+                return $"/{newId}/{path.Substring(oldId.Length + 2)}";
+            // fallback: replace any occurrence (should rarely be needed)
+            return path.Replace(oldId, newId);
+        }
 
 
     }

@@ -70,7 +70,7 @@ namespace SnapSaves.Helpers
 
                     projectFiles.Add(new ProjectFile
                     {
-                        Path = $"/SnapCode/{projectId}/{filePath}",
+                        Path = $"/{projectId}/{filePath}", // <-- Updated here
                         Content = File.ReadAllText(file),
                         IsDirectory = false
                     });
@@ -85,7 +85,7 @@ namespace SnapSaves.Helpers
 
                     projectFiles.Add(new ProjectFile
                     {
-                        Path = $"/SnapCode/{projectId}/{directoryPathInProject}",
+                        Path = $"/{projectId}/{directoryPathInProject}", // <-- Updated here
                         IsDirectory = true
                     });
 
@@ -96,6 +96,7 @@ namespace SnapSaves.Helpers
             return projectFiles;
         }
 
+
         public async Task<(bool Success, string ErrorMessage, Project? Project)> CreateProjectFromTemplateAsync(
     Template template, string userId, string? customName = null)
         {
@@ -104,26 +105,48 @@ namespace SnapSaves.Helpers
             if (templateProject == null)
                 return (false, "Template project not found in MongoDB.", null);
 
-            // Create a new project for the user
+            // Create a new project for the user (to get a new project ID)
             var newProject = new Project
             {
                 Name = string.IsNullOrWhiteSpace(customName) ? template.Name + " (Copy)" : customName,
                 UserId = userId,
                 CreatedAt = DateTime.UtcNow,
                 LastModified = DateTime.UtcNow,
-                Files = templateProject.Files.Select(f => new ProjectFile
-                {
-                    Path = f.Path,
-                    Content = f.Content,
-                    IsDirectory = f.IsDirectory
-                }).ToList(),
+                Files = new List<ProjectFile>(),
                 InstructionsId = template.InstructionsId
             };
 
             await _dbContext.Projects.InsertOneAsync(newProject);
 
+            var newProjectId = newProject.Id;
+            var oldProjectId = templateProject.Id;
+
+            // Copy files, replacing the old projectId in the path with the new one (robustly)
+            newProject.Files = templateProject.Files.Select(f => new ProjectFile
+            {
+                Path = ReplaceProjectIdInPath(f.Path, oldProjectId, newProjectId),
+                Content = f.Content,
+                IsDirectory = f.IsDirectory
+            }).ToList();
+
+            // Update the project with the new files
+            await _dbContext.Projects.ReplaceOneAsync(p => p.Id == newProjectId, newProject);
+
             return (true, "", newProject);
         }
+
+        private static string ReplaceProjectIdInPath(string path, string oldId, string newId)
+        {
+            // Handles /oldId, /oldId/, /oldId/something, etc.
+            if (path == $"/{oldId}")
+                return $"/{newId}";
+            if (path.StartsWith($"/{oldId}/"))
+                return $"/{newId}/{path.Substring(oldId.Length + 2)}";
+            // fallback: replace any occurrence (should rarely be needed)
+            return path.Replace(oldId, newId);
+        }
+
+
 
 
 
