@@ -387,13 +387,15 @@ namespace SnapSaves.Helpers
                 {
                     Path = "index.html",
                     Content = $"<html><head><title>{templates[i].Name}</title></head><body><h1>{templates[i].Name}</h1></body></html>",
-                    IsDirectory = false
+                    IsDirectory = false,
+                    IsBinary = false
                 },
                 new ProjectFile
                 {
                     Path = "style.css",
                     Content = "body { font-family: Arial, sans-serif; }",
-                    IsDirectory = false
+                    IsDirectory = false,
+                    IsBinary = false
                 }
             }
                 };

@@ -22,7 +22,6 @@ namespace SnapSaves.Controllers
             _projectHelper = projectHelper;
         }
 
-
         [HttpGet]
         public async Task<IActionResult> Index()
         {
@@ -88,7 +87,6 @@ namespace SnapSaves.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-
         [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -113,9 +111,6 @@ namespace SnapSaves.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-
-
-
         [Authorize]
         [HttpPost]
         public async Task<IActionResult> Create()
@@ -124,7 +119,6 @@ namespace SnapSaves.Controllers
             {
                 Console.WriteLine($"Claim Type: {claim.Type}, Claim Value: {claim.Value}");
             }
-
 
             var userId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
 
@@ -140,14 +134,15 @@ namespace SnapSaves.Controllers
                 CreatedAt = DateTime.UtcNow,
                 LastModified = DateTime.UtcNow,
                 Files = new List<ProjectFile>
-        {
-            new ProjectFile
-            {
-                Path = "default.txt",
-                Content = "This is a default file.",
-                IsDirectory = false
-            }
-        }
+                {
+                    new ProjectFile
+                    {
+                        Path = "default.txt",
+                        Content = "This is a default file.",
+                        IsDirectory = false,
+                        IsBinary = false // Explicitly mark as text
+                    }
+                }
             };
 
             await _dbContext.Projects.InsertOneAsync(newProject);
@@ -184,9 +179,6 @@ namespace SnapSaves.Controllers
 
             return RedirectToAction(nameof(Index));
         }
-
-
-
 
         [HttpGet]
         public async Task<IActionResult> Details(string id)
@@ -263,7 +255,8 @@ namespace SnapSaves.Controllers
             {
                 Path = ReplaceProjectIdInPath(f.Path, templateProject.Id, newProject.Id),
                 Content = f.Content,
-                IsDirectory = f.IsDirectory
+                IsDirectory = f.IsDirectory,
+                IsBinary = f.IsBinary // Propagate IsBinary!
             }).ToList();
 
             // Update the project with the new files
@@ -293,9 +286,8 @@ namespace SnapSaves.Controllers
             return Ok();
         }
 
-
         public async Task<(bool Success, string ErrorMessage, Project? Project)> CreateProjectFromTemplateAsync(
-    Template template, string userId, string? customName = null)
+            Template template, string userId, string? customName = null)
         {
             // Fetch the template project from MongoDB
             var templateProject = await _dbContext.TemplateProjects.Find(t => t.Id == template.MongoId).FirstOrDefaultAsync();
@@ -319,7 +311,8 @@ namespace SnapSaves.Controllers
             {
                 Path = ReplaceProjectIdInPath(f.Path, templateProject.Id, newProject.Id),
                 Content = f.Content,
-                IsDirectory = f.IsDirectory
+                IsDirectory = f.IsDirectory,
+                IsBinary = f.IsBinary // Propagate IsBinary!
             }).ToList();
 
             return (true, "", newProject);
@@ -336,7 +329,5 @@ namespace SnapSaves.Controllers
             // fallback: replace any occurrence (should rarely be needed)
             return path.Replace(oldId, newId);
         }
-
-
     }
 }

@@ -43,6 +43,9 @@ namespace SnapSaves.Models
         [BsonElement("content")]
         [JsonProperty("content")]
         public string Content { get; set; }
+        [BsonElement("isBinary")]
+        [JsonProperty("isBinary")]
+        public bool IsBinary { get; set; } = false;
 
         [BsonElement("isDirectory")]
         [JsonProperty("isDirectory")]

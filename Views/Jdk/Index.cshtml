@@ -1,4 +1,4 @@
-﻿﻿@{
+﻿@{
     Layout = null;
     ViewData["Title"] = "CheerpJ Test";
     var projectJson = ViewData["ProjectJson"] as string;
@@ -27,28 +27,36 @@
             await cheerpjInit(initParams);
             console.log("CheerpJ initialized successfully.");
             await cheerpjRunJar("/app/CreateFileCheerpJ.jar");
-            cheerpOSAddStringFile("/str/hello.txt", "Hello from JavaScript!");
-            cheerpOSAddStringFile("/str/data.json", '{"foo": "bar"}');
 
+            // Parse the project JSON from ViewData
+             const projectJsonString = @Html.Raw(Json.Serialize(projectJson ?? ""));
+             console.log(projectJsonString);
+             cheerpOSAddStringFile("/str/project.json", projectJsonString);
+
+            // Run JAR to copy from /str/ to /files/
             await cheerpjRunJar("/app/CreateSnapCodeProjectCheerpJ.jar");
-            const proj = @Html.Raw(projectJson);
-       //     await cheerpjRunMain(
-       //       "/app/JsonToFilesWriter.jar", // your new JAR
-       //       null, // classpath, if needed
-       //       [proj]
-          //  );
 
             // Create the display inside the container
             const container = document.getElementById("cheerpj-container");
 
             console.log("Running main class...");
-           // console.log("open:/files/@projectId");
-            await cheerpjRunMain("snapcode.app.App", classPath,["open:/files/TestProject"]);
+            await cheerpjRunMain("snapcode.app.App", classPath, ["open:/files/@projectId"]);
             console.log("Main class executed successfully.");
         } catch (error) {
             console.error("Error initializing or running CheerpJ:", error);
         }
+    })();
 
-       })();
-      
+        function base64ToUint8Array(base64) {
+        const binary = atob(base64);
+        const len = binary.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes;
+    }
+
+
+
 </script>

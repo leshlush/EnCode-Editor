@@ -33,6 +33,17 @@ namespace SnapSaves.Controllers
                 return NotFound("Project not found or you do not have access to it.");
             }
 
+            foreach (var file in project.Files)
+            {
+                if (file.IsBinary && !IsBase64String(file.Content))
+                {
+                    // Convert to base64 if not already
+                    var bytes = System.Text.Encoding.UTF8.GetBytes(file.Content);
+                    file.Content = Convert.ToBase64String(bytes);
+                }
+            }
+
+
             // Serialize the project to JSON
             var projectJson = JsonConvert.SerializeObject(project, new JsonSerializerSettings
             {
@@ -45,5 +56,27 @@ namespace SnapSaves.Controllers
 
             return View();
         }
+
+        private static bool IsBase64String(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s))
+                return false;
+
+            // Remove whitespace and check length
+            s = s.Trim();
+            if (s.Length % 4 != 0)
+                return false;
+
+            try
+            {
+                Convert.FromBase64String(s);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
     }
 }

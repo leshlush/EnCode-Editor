@@ -8,6 +8,11 @@ namespace SnapSaves.Helpers
     public class ProjectHelper
     {
         private readonly MongoDbContext _dbContext;
+        private static readonly HashSet<string> AlwaysTextExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".snapcode", ".txt", ".xml", ".md", ".csv", ".html", ".htm", ".js", ".css"
+        };
+
 
         public ProjectHelper(MongoDbContext dbContext)
         {
@@ -68,11 +73,18 @@ namespace SnapSaves.Helpers
                     var fileName = Path.GetFileName(file);
                     var filePath = $"{parentPath}/{fileName}".TrimStart('/');
 
+                    bool isBinary = IsBinaryFile(file);
+                    byte[] bytes = System.IO.File.ReadAllBytes(file);
+                    string content = isBinary
+                        ? Convert.ToBase64String(bytes)
+                        : System.Text.Encoding.UTF8.GetString(bytes);
+
                     projectFiles.Add(new ProjectFile
                     {
-                        Path = $"/{projectId}/{filePath}", // <-- Updated here
-                        Content = File.ReadAllText(file),
-                        IsDirectory = false
+                        Path = $"/{projectId}/{filePath}",
+                        Content = content,
+                        IsDirectory = false,
+                        IsBinary = isBinary
                     });
                 }
 
@@ -85,7 +97,7 @@ namespace SnapSaves.Helpers
 
                     projectFiles.Add(new ProjectFile
                     {
-                        Path = $"/{projectId}/{directoryPathInProject}", // <-- Updated here
+                        Path = $"/{projectId}/{directoryPathInProject}",
                         IsDirectory = true
                     });
 
@@ -126,7 +138,8 @@ namespace SnapSaves.Helpers
             {
                 Path = ReplaceProjectIdInPath(f.Path, oldProjectId, newProjectId),
                 Content = f.Content,
-                IsDirectory = f.IsDirectory
+                IsDirectory = f.IsDirectory,
+                IsBinary = f.IsBinary
             }).ToList();
 
             // Update the project with the new files
@@ -145,10 +158,20 @@ namespace SnapSaves.Helpers
             // fallback: replace any occurrence (should rarely be needed)
             return path.Replace(oldId, newId);
         }
+        private static bool IsBinaryFile(string filePath)
+        {
+            var ext = Path.GetExtension(filePath);
+            if (AlwaysTextExtensions.Contains(ext))
+                return false; // Always treat as text
 
-
-
-
+            using var stream = System.IO.File.OpenRead(filePath);
+            var buffer = new byte[8000];
+            int read = stream.Read(buffer, 0, buffer.Length);
+            for (int i = 0; i < read; i++)
+                if (buffer[i] == 0)
+                    return true;
+            return false;
+        }
 
     }
 }
