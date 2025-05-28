@@ -99,6 +99,7 @@ namespace SnapSaves.Controllers
             var extractPath = Path.Combine(tempPath, "Extracted");
             Directory.CreateDirectory(extractPath);
             ZipFile.ExtractToDirectory(templateZipFilePath, extractPath);
+            LogBinaryFiles(extractPath);
 
             try
             {
@@ -216,6 +217,28 @@ namespace SnapSaves.Controllers
             };
 
             return View(viewModel);
+        }
+
+        void LogBinaryFiles(string rootDir)
+        {
+            foreach (var file in Directory.EnumerateFiles(rootDir, "*", SearchOption.AllDirectories))
+            {
+                // Simple binary check: you may want to reuse your IsBinaryFile logic
+                var ext = Path.GetExtension(file);
+                var alwaysTextExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".snapcode", ".txt", ".xml", ".md", ".csv", ".html", ".htm", ".js", ".css"
+        };
+                bool isBinary = !alwaysTextExtensions.Contains(ext);
+
+                if (isBinary)
+                {
+                    byte[] bytes = System.IO.File.ReadAllBytes(file);
+                    string base64 = Convert.ToBase64String(bytes);
+                    Console.WriteLine($"[Binary File Upload] File: {file}");
+                    Console.WriteLine($"[Binary File Upload] Base64 Content: {base64}");
+                }
+            }
         }
     }
 
