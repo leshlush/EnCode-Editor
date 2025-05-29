@@ -39,6 +39,7 @@ namespace SnapSaves.Controllers
 
             if (!string.IsNullOrEmpty(instructionsPath))
             {
+                ViewData["ShowInstructionsButtons"] = true;
                 // Pass the path to the view for rendering the instructions pane
                 ViewData["InstructionsPath"] = instructionsPath;
                 ViewData["ProjectId"] = projectId;
@@ -48,6 +49,7 @@ namespace SnapSaves.Controllers
             }
             else
             {
+                ViewData["ShowInstructionsButtons"] = false;
                 // No instructions: show a view without the instructions pane
                 ViewData["ProjectId"] = projectId;
                 ViewData["UserId"] = userId;
