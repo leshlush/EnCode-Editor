@@ -6,11 +6,9 @@
 }
 
 <div id="snapcode-container">
-    <iframe id="instructions-iframe"
-            src="@Url.Action("Placeholder", "Instructions")">
-    </iframe>
     <iframe id="jdk-iframe"
-            src="@Url.Action("Index", "Jdk", new { projectId = projectId, userId = userId })">
+            src="@Url.Action("Index", "Jdk", new { projectId = projectId, userId = userId })"
+            style="width: 100%; height: 100%; border: none;">
     </iframe>
 </div>
 
@@ -24,41 +22,17 @@
     }
 
     #snapcode-container {
-        display: flex;
         height: 100vh;
-    }
-
-    #instructions-iframe {
-        width: 25%;
-        border-right: 1px solid #ccc;
-        height: 100%;
+        width: 100vw;
     }
 
     #jdk-iframe {
-        width: 75%;
+        width: 100%;
         height: 100%;
         border: none;
     }
 </style>
 
-<script>
-    function setView(view) {
-        const instructionsFrame = document.getElementById('instructions-iframe');
-        const jdkFrame = document.getElementById('jdk-iframe');
 
-        if (view === 'split') {
-            instructionsFrame.style.width = '25%';
-            instructionsFrame.style.display = 'block';
-            jdkFrame.style.width = '75%';
-            jdkFrame.style.display = 'block';
-        } else if (view === 'instructions') {
-            instructionsFrame.style.width = '100%';
-            instructionsFrame.style.display = 'block';
-            jdkFrame.style.display = 'none';
-        } else if (view === 'jdk') {
-            jdkFrame.style.width = '100%';
-            jdkFrame.style.display = 'block';
-            instructionsFrame.style.display = 'none';
-        }
-    }
-</script>
+
+

@@ -22,6 +22,16 @@
                         <a class="nav-link text-dark" href="/Admin">Admin</a>
                     </li>
                 }
+                @* Add SnapCode-specific buttons only when on the SnapCode view *@
+                @if (ViewContext.RouteData.Values["controller"]?.ToString() == "SnapCode" &&
+                                ViewContext.RouteData.Values["action"]?.ToString() == "Index")
+                {
+                    <div class="d-flex">
+                        <button class="btn btn-outline-primary me-2" onclick="setView('split')">Split View</button>
+                        <button class="btn btn-outline-primary me-2" onclick="setView('instructions')">Instructions Only</button>
+                        <button class="btn btn-outline-primary" onclick="setView('jdk')">JDK Only</button>
+                    </div>
+                }
             </ul>
             <ul class="navbar-nav">
                 @if (User.Identity.IsAuthenticated)
@@ -45,17 +55,6 @@
                     </li>
                 }
             </ul>
-
-            @* Add SnapCode-specific buttons only when on the SnapCode view *@
-            @if (ViewContext.RouteData.Values["controller"]?.ToString() == "SnapCode" &&
-            ViewContext.RouteData.Values["action"]?.ToString() == "Index")
-            {
-                <div class="d-flex">
-                    <button class="btn btn-outline-primary me-2" onclick="setView('split')">Split View</button>
-                    <button class="btn btn-outline-primary me-2" onclick="setView('instructions')">Instructions Only</button>
-                    <button class="btn btn-outline-primary" onclick="setView('jdk')">JDK Only</button>
-                </div>
-            }
         </div>
     </div>
 </nav>
