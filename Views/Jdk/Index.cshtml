@@ -193,27 +193,20 @@
                             "/app/Jdk/SnapBuilder-2025.05.jar:" +
                             "/app/Jdk/Greenfoot-2025.05.jar";
 
-            console.log("Initializing CheerpJ...");
             await cheerpjInit(initParams);
-            console.log("CheerpJ initialized successfully.");
-            await cheerpjRunJar("/app/CreateFileCheerpJ.jar");
-
+            
             // Parse the project JSON from ViewData
             const projectJsonString = @Html.Raw(Json.Serialize(projectJson ?? ""));
-            console.log(projectJsonString);
             cheerpOSAddStringFile("/str/project.json", projectJsonString);
 
             // Run JAR to copy from /str/ to /files/
             await cheerpjRunJar("/app/CreateSnapCodeProjectCheerpJ.jar");
 
-            // Create the display inside the container
             const container = document.getElementById("cheerpj-container");
 
-            console.log("Running main class...");
             await cheerpjRunMain("snapcode.app.App", classPath, ["open:/files/@projectId"]);
-            console.log("Main class executed successfully.");
         } catch (error) {
-            console.error("Error initializing or running CheerpJ:", error);
+            console.error("Error initializing or running:", error);
         }
     })();
 
