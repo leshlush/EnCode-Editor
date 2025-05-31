@@ -32,6 +32,17 @@
         border: none;
     }
 </style>
+<script>
+    function saveProject() {
+        // Get the JDK iframe
+        var jdkFrame = document.getElementById('jdk-iframe');
+        if (jdkFrame && jdkFrame.contentWindow && typeof jdkFrame.contentWindow.saveProject === 'function') {
+            jdkFrame.contentWindow.saveProject();
+        } else {
+            alert('Save function not available in JDK view.');
+        }
+    }
+</script>
 
 
 

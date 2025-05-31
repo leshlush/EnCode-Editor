@@ -3,6 +3,7 @@
     ViewData["Title"] = "CheerpJ Test";
     var projectJson = ViewData["ProjectJson"] as string;
     var projectId = ViewData["ProjectId"] as string;
+    var userId = ViewData["UserId"] as string;
 }
 
 <h1>Loading Coding Environment...</h1>
@@ -11,8 +12,177 @@
 <script src="https://cjrtnc.leaningtech.com/4.0/loader.js"></script>
 <script src="/Jdk/cjdom.js"></script>
 <script>
+    const userId = '@userId';
+
+    // --- Utility: Convert Uint8Array to base64 in chunks ---
+    function uint8ToBase64(uint8Arr) {
+        let CHUNK_SIZE = 0x8000; // 32KB per chunk
+        let index = 0;
+        let length = uint8Arr.length;
+        let result = '';
+        while (index < length) {
+            let slice = uint8Arr.subarray(index, Math.min(index + CHUNK_SIZE, length));
+            result += String.fromCharCode.apply(null, slice);
+            index += CHUNK_SIZE;
+        }
+        return btoa(result);
+    }
+
+    // --- IndexedDB Project Save Logic using getAllKeys() and key range ---
+    async function readAllProjectFilesFromIndexedDB(projectId) {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open('cjFS_/files/');
+            request.onerror = () => {
+                console.error('Failed to open IndexedDB');
+                reject('Failed to open IndexedDB');
+            };
+            request.onsuccess = () => {
+                const db = request.result;
+                const tx = db.transaction('files', 'readonly');
+                const store = tx.objectStore('files');
+                const prefix = `/${projectId}/`;
+                const lower = prefix;
+                const upper = prefix + '\uffff';
+                const range = IDBKeyRange.bound(lower, upper, false, false);
+
+                const getAllKeysRequest = store.getAllKeys(range);
+                getAllKeysRequest.onsuccess = function (event) {
+                    const keys = event.target.result;
+                    if (!keys || keys.length === 0) {
+                        resolve([]);
+                        return;
+                    }
+                    const files = [];
+                    let processed = 0;
+                    keys.forEach(key => {
+                        const getReq = store.get(key);
+                        getReq.onsuccess = function (e) {
+                            let entry = e.target.result;
+                            if (typeof entry === "string") {
+                                try {
+                                    entry = JSON.parse(entry);
+                                } catch (err) {
+                                    console.warn('Failed to parse entry for', key, entry);
+                                    processed++;
+                                    if (processed === keys.length) {
+                                        resolve(files);
+                                    }
+                                    return;
+                                }
+                            }
+                            if (entry) {
+                                const path = key;
+                                const binPrefix = `/${projectId}/bin`;
+                                if (
+                                    path === binPrefix ||
+                                    path === binPrefix + '/' ||
+                                    path.startsWith(binPrefix + '/')
+                                ) {
+                                    // Skip bin directory and its contents
+                                    processed++;
+                                    if (processed === keys.length) {
+                                        resolve(files);
+                                    }
+                                    return;
+                                }
+                                // Directory detection: CheerpJ uses type: "dir"
+                                if (entry.type === "dir" || entry.isDir === true) {
+                                    files.push({
+                                        path: path,
+                                        isDirectory: true,
+                                        isBinary: false,
+                                        content: "",
+                                        children: []
+                                    });
+                                } else {
+                                    let content, isBinary = false;
+                                    let fileData = entry.contents;
+                                    if (fileData && !(fileData instanceof Uint8Array)) {
+                                        // If contents is an array or object, convert to Uint8Array
+                                        fileData = new Uint8Array(Object.values(fileData));
+                                    }
+                                    if (!fileData) {
+                                        console.warn('No file data found for', path, entry);
+                                        content = "";
+                                    } else {
+                                        try {
+                                            content = new TextDecoder('utf-8', {fatal: true}).decode(fileData);
+                                            if (content.includes('\uFFFD')) throw new Error();
+                                        } catch {
+                                            isBinary = true;
+                                            content = uint8ToBase64(fileData);
+                                        }
+                                    }
+                                    files.push({
+                                        path: path,
+                                        isDirectory: false,
+                                        isBinary,
+                                        content,
+                                        children: []
+                                    });
+                                }
+                            }
+                            processed++;
+                            if (processed === keys.length) {
+                                resolve(files);
+                            }
+                        };
+                        getReq.onerror = function () {
+                            processed++;
+                            if (processed === keys.length) {
+                                resolve(files);
+                            }
+                        };
+                    });
+                };
+                getAllKeysRequest.onerror = () => {
+                    reject('Failed to get all file keys');
+                };
+            };
+        });
+    }
+
+    async function buildProjectJsonFromIndexedDB(projectId, projectName, userId) {
+        const files = await readAllProjectFilesFromIndexedDB(projectId);
+        const project = {
+            Id: projectId,
+            Name: projectName,
+            UserId: userId,
+            Files: files // Flat array, no nesting
+        };
+        console.log('Project JSON to be sent:', project);
+        return project;
+    }
+
+    async function saveProject() {
+        const projectId = '@projectId';
+        const projectName = document.title || 'Project';
+
+        const project = await buildProjectJsonFromIndexedDB(projectId, projectName, userId);
+
+        console.log('Sending project to server:', project);
+
+        const response = await fetch('/api/ProjectsApi/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(project)
+        });
+
+        if (response.ok) {
+            console.log('Project saved successfully!');
+            alert('Project saved successfully!');
+        } else {
+            const errorText = await response.text();
+            console.error('Failed to save project. Server response:', errorText);
+            alert('Failed to save project.');
+        }
+    }
+
+    // --- Main CheerpJ Initialization ---
     (async function () {
         try {
+            // No more clearing IndexedDB files store!
+
             // Initialize CheerpJ
             var initParams = { version: 11, natives: cjdomNativeMethods };
             var classPath = "/app/Jdk/CJDom-2025.05.jar:" +
@@ -29,9 +199,9 @@
             await cheerpjRunJar("/app/CreateFileCheerpJ.jar");
 
             // Parse the project JSON from ViewData
-             const projectJsonString = @Html.Raw(Json.Serialize(projectJson ?? ""));
-             console.log(projectJsonString);
-             cheerpOSAddStringFile("/str/project.json", projectJsonString);
+            const projectJsonString = @Html.Raw(Json.Serialize(projectJson ?? ""));
+            console.log(projectJsonString);
+            cheerpOSAddStringFile("/str/project.json", projectJsonString);
 
             // Run JAR to copy from /str/ to /files/
             await cheerpjRunJar("/app/CreateSnapCodeProjectCheerpJ.jar");
@@ -46,17 +216,5 @@
             console.error("Error initializing or running CheerpJ:", error);
         }
     })();
-
-        function base64ToUint8Array(base64) {
-        const binary = atob(base64);
-        const len = binary.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-            bytes[i] = binary.charCodeAt(i);
-        }
-        return bytes;
-    }
-
-
 
 </script>

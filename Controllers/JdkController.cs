@@ -53,6 +53,7 @@ namespace SnapSaves.Controllers
             // Pass the JSON string to the view
             ViewData["ProjectJson"] = projectJson;
             ViewData["ProjectId"] = projectId;
+            ViewData["UserId"] = project.UserId;
 
             return View();
         }
