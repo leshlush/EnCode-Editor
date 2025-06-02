@@ -1,5 +1,38 @@
 ﻿@{
     ViewData["Title"] = "Home Page";
+    var isAuthenticated = User.Identity.IsAuthenticated;
+}
+
+@if (!isAuthenticated)
+{
+    <div class="snapcode-hero text-center py-5 mb-4">
+        <h1 class="display-4 fw-bold mb-3 text-gradient">Welcome to SnapCode</h1>
+        <p class="lead mb-4">
+            Instantly create, edit, and share code projects in your browser.<br />
+            SnapCode is your all-in-one coding workspace—no setup required.
+        </p>
+        <div class="d-flex justify-content-center gap-3">
+            <a asp-controller="Auth" asp-action="Register" class="btn btn-primary btn-lg px-4 shadow">Get Started Free</a>
+            <a asp-controller="Auth" asp-action="Login" class="btn btn-outline-secondary btn-lg px-4">Sign In</a>
+        </div>
+        <div class="mt-4">
+            <span class="badge bg-success fs-6">No installation needed</span>
+            <span class="badge bg-info text-dark fs-6 ms-2">Try a demo project instantly</span>
+        </div>
+    </div>
+    <style>
+        .snapcode-hero {
+            background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+            border-radius: 1rem;
+            box-shadow: 0 4px 32px rgba(80, 80, 160, 0.08);
+        }
+        .text-gradient {
+            background: linear-gradient(90deg, #6366f1, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
 }
 
 <div class="text-center">

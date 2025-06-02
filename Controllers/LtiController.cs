@@ -6,6 +6,7 @@ using SnapSaves.Data;
 using SnapSaves.Models;
 using MongoDB.Driver;
 using MongoDB.Bson;
+using Microsoft.EntityFrameworkCore;
 
 namespace SnapSaves.Controllers
 {
@@ -37,14 +38,21 @@ namespace SnapSaves.Controllers
             // Determine the user's role
             string userRole = DetermineUserRole(ltiRequest);
 
+            // Get or create the organization and its default course
+            var organization = await GetOrCreateOrganization(ltiRequest);
+            var defaultCourse = await GetOrCreateDefaultCourseAsync(organization);
+
             // Check if the user exists or create a new one
-            var identityUser = await GetOrCreateUserAsync(ltiRequest, userRole);
+            var identityUser = await GetOrCreateUserAsync(ltiRequest, userRole, organization);
+
+            // Enroll the user in the default course if not already enrolled
+            await EnrollUserInDefaultCourseAsync(identityUser, defaultCourse);
 
             // Log the user in
             await _signInManager.SignInAsync(identityUser, isPersistent: false);
 
-            // Return the LTI launch view
-            return View("LtiLaunch", ltiRequest);
+            // Redirect to the Course Details view of the organization's default course
+            return RedirectToAction("Details", "Courses", new { id = defaultCourse.Id });
         }
 
         private async Task<LtiRequest> ParseLtiRequestAsync()
@@ -83,18 +91,18 @@ namespace SnapSaves.Controllers
             return "Student"; // Default to "Student"
         }
 
-        private async Task<AppUser> GetOrCreateUserAsync(LtiRequest ltiRequest, string userRole)
+        private async Task<AppUser> GetOrCreateUserAsync(LtiRequest ltiRequest, string userRole, Organization organization)
         {
             string toolConsumerInstanceGuid = ltiRequest.Parameters.FirstOrDefault(p => p.Key == "tool_consumer_instance_guid").Value;
-
             string userId = ltiRequest.UserId;
             string uniqueUserId = $"{toolConsumerInstanceGuid}:{userId}";
 
-            var identityUser = await _userManager.FindByNameAsync(uniqueUserId);
+            var identityUser = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.UserName == uniqueUserId && u.OrganizationId == organization.Id);
 
             if (identityUser == null)
             {
-                identityUser = await CreateUserAsync(ltiRequest, userRole, uniqueUserId);
+                identityUser = await CreateUserAsync(ltiRequest, userRole, uniqueUserId, organization);
             }
             else
             {
@@ -104,13 +112,8 @@ namespace SnapSaves.Controllers
             return identityUser;
         }
 
-
-        private async Task<AppUser> CreateUserAsync(LtiRequest ltiRequest, string userRole, string username)
+        private async Task<AppUser> CreateUserAsync(LtiRequest ltiRequest, string userRole, string username, Organization organization)
         {
-            // Get or create the organization
-            var organization = await GetOrCreateOrganization(ltiRequest);
-
-            // Create the new user and assign them to the organization
             var newUser = new AppUser
             {
                 UserName = username,
@@ -130,41 +133,26 @@ namespace SnapSaves.Controllers
             }
 
             await _userManager.AddToRoleAsync(newUser, userRole);
-            await AssignUserToDefaultCourseAsync(newUser);
 
             return newUser;
         }
 
-
         private async Task<Organization> GetOrCreateOrganization(LtiRequest ltiRequest)
         {
-            // Extract the required parameters from the LTI request
             string toolConsumerInstanceGuid = ltiRequest.Parameters.FirstOrDefault(p => p.Key == "tool_consumer_instance_guid").Value;
             string toolConsumerInstanceName = ltiRequest.Parameters.FirstOrDefault(p => p.Key == "tool_consumer_instance_name").Value;
-
-            // Generate the organization name by combining the GUID and name
             string organizationName = $"{toolConsumerInstanceName} ({toolConsumerInstanceGuid})";
-
-            // Use a default description if none is provided
             string organizationDescription = ltiRequest.Parameters.FirstOrDefault(p => p.Key == "organization_description").Value ?? "Default Description";
 
-            // Check for an existing organization with the same name and ToolConsumerInstanceGuid
             var organization = _context.Organizations
                 .FirstOrDefault(o => o.Name == organizationName && o.ToolConsumerInstanceGuid == toolConsumerInstanceGuid);
 
-            // If not found, create a new one
             if (organization == null)
             {
                 organization = await CreateOrganization(organizationName, organizationDescription, toolConsumerInstanceGuid);
             }
 
             return organization;
-        }
-
-
-        private Organization GetOrganization(string organizationName)
-        {
-            return _context.Organizations.FirstOrDefault(o => o.Name == organizationName);
         }
 
         private async Task<Organization> CreateOrganization(string name, string description, string toolConsumerInstanceGuid)
@@ -182,7 +170,44 @@ namespace SnapSaves.Controllers
             return organization;
         }
 
+        private async Task<Course> GetOrCreateDefaultCourseAsync(Organization organization)
+        {
+            // Use a consistent default course name
+            string defaultCourseName = "Default Course";
 
+            var defaultCourse = await _context.Courses
+                .FirstOrDefaultAsync(c => c.OrganizationId == organization.Id && c.Name == defaultCourseName);
+
+            if (defaultCourse == null)
+            {
+                defaultCourse = new Course
+                {
+                    Name = defaultCourseName,
+                    Description = $"Default course for {organization.Name}",
+                    OrganizationId = organization.Id
+                };
+                _context.Courses.Add(defaultCourse);
+                await _context.SaveChangesAsync();
+            }
+
+            return defaultCourse;
+        }
+
+        private async Task EnrollUserInDefaultCourseAsync(AppUser user, Course defaultCourse)
+        {
+            var alreadyEnrolled = await _context.UserCourses
+                .AnyAsync(uc => uc.UserId == user.Id && uc.CourseId == defaultCourse.Id);
+
+            if (!alreadyEnrolled)
+            {
+                _context.UserCourses.Add(new UserCourse
+                {
+                    UserId = user.Id,
+                    CourseId = defaultCourse.Id
+                });
+                await _context.SaveChangesAsync();
+            }
+        }
 
         private async Task EnsureUserHasRoleAsync(AppUser user, string userRole)
         {
@@ -196,22 +221,6 @@ namespace SnapSaves.Controllers
                 {
                     throw new InvalidOperationException("Failed to assign role.");
                 }
-            }
-        }
-
-        private async Task AssignUserToDefaultCourseAsync(AppUser user)
-        {
-            var course = _context.Courses.FirstOrDefault(c => c.Name == "Math 101");
-
-            if (course != null)
-            {
-                _context.UserCourses.Add(new UserCourse
-                {
-                    UserId = user.Id,
-                    CourseId = course.Id
-                });
-
-                await _context.SaveChangesAsync();
             }
         }
     }
