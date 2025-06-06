@@ -1,0 +1,38 @@
+﻿@{
+    Layout = null;
+    ViewData["Title"] = "SnapCode Demo (CheerpJ)";
+}
+
+<div id="cheerpj-container" >
+    
+	
+</div>
+
+<script src="https://cjrtnc.leaningtech.com/4.0/loader.js"></script>
+<script src="/Jdk/cjdom.js"></script>
+<script>
+      
+    (async function () {
+        try {
+            // Initialize CheerpJ
+            var initParams = { version: 11, natives: cjdomNativeMethods };
+            var classPath =
+                "/app/Jdk/CJDom-2025.05.jar:" +
+                "/app/Jdk/SnapCJ-2025.05.jar:" +
+                "/app/Jdk/SnapKit-2025.05.jar:" +
+                "/app/Jdk/SnapCode-2025.05.jar:" +
+                "/app/Jdk/jdk.compiler.jar:" +
+                "/app/Jdk/SnapBuilder-2025.05.jar:" +
+                "/app/Jdk/Greenfoot-2025.05.jar";
+
+            await cheerpjInit(initParams);
+             const appContainer = document.getElementById("cheerpj-container");
+             cheerpjCreateDisplay(0, 0, appContainer);
+
+            // Just run SnapCode main class, no project or user context
+            await cheerpjRunMain("snapcode.app.App", classPath, []);
+        } catch (error) {
+            console.error("Error initializing or running SnapCode demo:", error);
+        }
+    })();
+</script>

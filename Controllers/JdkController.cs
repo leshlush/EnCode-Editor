@@ -16,6 +16,12 @@ namespace SnapSaves.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> Demo()
+        {
+            return View();
+        }
+
+        [HttpGet]
         public async Task<IActionResult> Index(string projectId, string userId)
         {
             if (string.IsNullOrEmpty(projectId) || string.IsNullOrEmpty(userId))
