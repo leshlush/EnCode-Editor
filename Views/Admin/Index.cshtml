@@ -36,6 +36,8 @@
                         @Html.AntiForgeryToken()
                         <button type="submit" class="btn btn-primary btn-sm">Create Project</button>
                     </form>
+                    <!-- New: Update Instructions Button -->
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="showUpdateInstructionsModal(@template.Id)">Update Instructions</button>
                 </li>
             }
         </ul>
@@ -68,10 +70,41 @@
     </div>
 </div>
 
+<!-- Modal for updating instructions -->
+<div class="modal fade" id="updateInstructionsModal" tabindex="-1" aria-labelledby="updateInstructionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form id="updateInstructionsForm" asp-controller="Admin" asp-action="UpdateTemplateInstructions" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="updateTemplateId" name="templateId" value="" />
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="updateInstructionsModalLabel">Update Template Instructions</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="instructionsZip" class="form-label">Upload New Instructions (.zip of HTML/CSS/JS):</label>
+                        <input type="file" class="form-control" id="instructionsZip" name="instructionsZip" accept=".zip" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Update Instructions</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
     function toggleInstructionsUpload() {
         var check = document.getElementById('hasInstructions');
         var upload = document.getElementById('instructionsUpload');
         upload.style.display = check.checked ? 'block' : 'none';
+    }
+
+        function showUpdateInstructionsModal(templateId) {
+        document.getElementById('updateTemplateId').value = templateId;
+        var modal = new bootstrap.Modal(document.getElementById('updateInstructionsModal'));
+        modal.show();
     }
 </script>

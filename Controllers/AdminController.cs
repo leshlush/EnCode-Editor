@@ -187,6 +187,63 @@ namespace SnapSaves.Controllers
             return RedirectToAction("Index", "Projects");
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateTemplateInstructions(int templateId, IFormFile instructionsZip)
+        {
+            if (instructionsZip == null || instructionsZip.Length == 0)
+                return BadRequest("No instructions file uploaded.");
+
+            var template = await _context.Templates.FindAsync(templateId);
+            if (template == null)
+                return NotFound("Template not found.");
+
+            // Save the new instructions zip to wwwroot/instructions/{guid}/
+            var instructionsFolder = Path.Combine("wwwroot", "instructions", Guid.NewGuid().ToString());
+            Directory.CreateDirectory(instructionsFolder);
+
+            var instructionsZipFilePath = Path.Combine(instructionsFolder, instructionsZip.FileName);
+            using (var stream = new FileStream(instructionsZipFilePath, FileMode.Create))
+            {
+                await instructionsZip.CopyToAsync(stream);
+            }
+            // Extract the zip
+            System.IO.Compression.ZipFile.ExtractToDirectory(instructionsZipFilePath, instructionsFolder);
+
+            // Save the relative path to content/index.html as the Location in Instructions
+            var instructions = new Instructions
+            {
+                Id = Guid.NewGuid().ToString(),
+                Type = InstructionsType.Static,
+                Location = Path.Combine("instructions", Path.GetFileName(instructionsFolder), "content", "index.html"),
+                Description = $"Instructions for {template.Name} (updated)",
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.Instructions.Add(instructions);
+            await _context.SaveChangesAsync();
+
+            // Update the template's InstructionsId
+            template.InstructionsId = instructions.Id;
+            _context.Templates.Update(template);
+            await _context.SaveChangesAsync();
+
+            // --- NEW: Update all user projects created from this template ---
+            // 1. Find all TemplateProject records for this template
+            var templateProjectMongoIds = await _context.TemplateProjects
+                .Where(tp => tp.TemplateId == templateId)
+                .Select(tp => tp.ProjectMongoId)
+                .ToListAsync();
+
+            if (templateProjectMongoIds.Any())
+            {
+                // 2. Update all corresponding MongoDB projects' InstructionsId
+                var filter = Builders<Project>.Filter.In(p => p.Id, templateProjectMongoIds);
+                var update = Builders<Project>.Update.Set(p => p.InstructionsId, instructions.Id);
+                await _mongoDbContext.Projects.UpdateManyAsync(filter, update);
+            }
+
+            return RedirectToAction("Index");
+        }
 
         [HttpGet]
         public async Task<IActionResult> Index()
