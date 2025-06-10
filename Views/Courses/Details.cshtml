@@ -9,35 +9,36 @@
 
 <!-- Tab navigation (unchanged) -->
 <ul class="nav nav-tabs" id="courseDetailsTabs" role="tablist">
+   
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="universalTemplates-tab" data-bs-toggle="tab" data-bs-target="#universalTemplates" type="button" role="tab" aria-controls="universalTemplates" aria-selected="true">
+            Project Templates
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="templates-tab" data-bs-toggle="tab" data-bs-target="#templates" type="button" role="tab" aria-controls="templates" aria-selected="false">
+            Teacher-Created Templates
+        </button>
+    </li>    
     @if (await PermissionHelper.UserHasPermissionAsync(await UserManager.GetUserAsync(User), "ViewStudents"))
     {
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="students-tab" data-bs-toggle="tab" data-bs-target="#students" type="button" role="tab" aria-controls="students" aria-selected="true">
+            <button class="nav-link" id="students-tab" data-bs-toggle="tab" data-bs-target="#students" type="button" role="tab" aria-controls="students" aria-selected="false">
                 Students
             </button>
         </li>
     }
-    <li class="nav-item" role="presentation">
-        <button class="nav-link @(!(await PermissionHelper.UserHasPermissionAsync(await UserManager.GetUserAsync(User), "ViewStudents")) ? "active" : "")" id="templates-tab" data-bs-toggle="tab" data-bs-target="#templates" type="button" role="tab" aria-controls="templates" aria-selected="false">
-            Templates
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="universalTemplates-tab" data-bs-toggle="tab" data-bs-target="#universalTemplates" type="button" role="tab" aria-controls="universalTemplates" aria-selected="false">
-            Universal Templates
-        </button>
-    </li>
 </ul>
 
 <!-- Tab content -->
 <div class="tab-content" id="courseDetailsTabContent">
     @if (await PermissionHelper.UserHasPermissionAsync(await UserManager.GetUserAsync(User), "ViewStudents"))
     {
-        <div class="tab-pane fade show active" id="students" role="tabpanel" aria-labelledby="students-tab">
+        <div class="tab-pane fade" id="students" role="tabpanel" aria-labelledby="students-tab">
             @await Html.PartialAsync("_UserCourse", Model.UserCourses)
         </div>
     }
-    <div class="tab-pane fade @(!(await PermissionHelper.UserHasPermissionAsync(await UserManager.GetUserAsync(User), "ViewStudents")) ? "show active" : "")" id="templates" role="tabpanel" aria-labelledby="templates-tab">
+    <div class="tab-pane fade" id="templates" role="tabpanel" aria-labelledby="templates-tab">
         <!-- Render the CourseTemplates as cards -->
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mt-2">
             @foreach (var ct in Model.CourseTemplates)
@@ -60,7 +61,7 @@
 
         </div>
     </div>
-    <div class="tab-pane fade" id="universalTemplates" role="tabpanel" aria-labelledby="universalTemplates-tab">
+    <div class="tab-pane fade show active" id="universalTemplates" role="tabpanel" aria-labelledby="universalTemplates-tab">
         @{
             var viewData = new ViewDataDictionary(ViewData) { { "CourseId", Model.Id } };
         }
