@@ -68,4 +68,13 @@
             instructionsFrame.style.display = 'none';
         }
     }
+
+        function saveProject() {
+        var jdkFrame = document.getElementById('jdk-iframe');
+        if (jdkFrame && jdkFrame.contentWindow && typeof jdkFrame.contentWindow.saveProject === 'function') {
+            jdkFrame.contentWindow.saveProject();
+        } else {
+            alert('Save function not available in JDK view.');
+        }
+    }
 </script>
