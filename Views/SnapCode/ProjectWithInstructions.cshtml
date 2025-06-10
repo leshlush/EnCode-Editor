@@ -5,6 +5,7 @@
     var userId = ViewData["UserId"] as string;
     var instructionsId = ViewData["InstructionsId"] as string ?? Model?.InstructionsId;
     var instructionsUrl = ViewData["InstructionsUrl"] as string;
+	var projectName = ViewData["ProjectName"] as string ?? Model?.Name ?? "Project";
     // Fallback: if instructionsUrl is not set, try to build it from Model.Instructions.Location
     if (string.IsNullOrEmpty(instructionsUrl) && Model?.Instructions != null && !string.IsNullOrEmpty(Model.Instructions.Location))
     {

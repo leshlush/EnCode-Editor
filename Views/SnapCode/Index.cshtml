@@ -4,11 +4,12 @@
     ViewData["Title"] = "CheerpJ Viewer";
     var projectId = ViewData["ProjectId"] as string;
     var userId = ViewData["UserId"] as string;
+	var projectName = ViewData["ProjectName"] as string;
 }
 
 
     <iframe id="jdk-iframe"
-            src="@Url.Action("Index", "Jdk", new { projectId = projectId, userId = userId })">
+            src="@Url.Action("Index", "Jdk", new { projectId = projectId, userId = userId, projectName = projectName })">
     </iframe>
 
 <style>

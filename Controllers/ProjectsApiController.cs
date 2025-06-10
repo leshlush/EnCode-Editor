@@ -23,10 +23,19 @@ public class ProjectsApiController : ControllerBase
             return BadRequest("Invalid project data.");
         }
 
-        Console.WriteLine($"SaveProject: Received project with ID {updatedProject.Id}, Name {updatedProject.Name}, {updatedProject.Files?.Count ?? 0} files.");
-
         var filter = Builders<Project>.Filter.Eq(p => p.Id, updatedProject.Id);
-        var updateResult = await _dbContext.Projects.ReplaceOneAsync(filter, updatedProject);
+
+        // Build the update definition
+        var updateDef = Builders<Project>.Update
+            .Set(p => p.Name, updatedProject.Name)
+            .Set(p => p.Files, updatedProject.Files)
+            .Set(p => p.LastModified, DateTime.UtcNow);
+
+        // Only update InstructionsId if it is not null (explicitly set)
+        if (updatedProject.InstructionsId != null)
+            updateDef = updateDef.Set(p => p.InstructionsId, updatedProject.InstructionsId);
+
+        var updateResult = await _dbContext.Projects.UpdateOneAsync(filter, updateDef);
 
         if (updateResult.MatchedCount == 0)
         {

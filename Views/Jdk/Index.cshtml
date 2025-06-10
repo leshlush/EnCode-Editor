@@ -4,6 +4,7 @@
     var projectJson = ViewData["ProjectJson"] as string;
     var projectId = ViewData["ProjectId"] as string;
     var userId = ViewData["UserId"] as string;
+	var projectName = ViewData["ProjectName"] as string ?? "Project";
 }
 
 <div id="cheerpj-container"></div>
@@ -155,7 +156,7 @@
 
     async function saveProject() {
         const projectId = '@projectId';
-        const projectName = document.title || 'Project';
+        const projectName = '@projectName';
 
         const project = await buildProjectJsonFromIndexedDB(projectId, projectName, userId);
 

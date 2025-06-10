@@ -22,7 +22,7 @@ namespace SnapSaves.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(string projectId, string userId)
+        public async Task<IActionResult> Index(string projectId, string userId, string projectName)
         {
             if (string.IsNullOrEmpty(projectId) || string.IsNullOrEmpty(userId))
             {
@@ -60,6 +60,7 @@ namespace SnapSaves.Controllers
             ViewData["ProjectJson"] = projectJson;
             ViewData["ProjectId"] = projectId;
             ViewData["UserId"] = project.UserId;
+            ViewData["ProjectName"] = project.Name;
 
             return View();
         }
