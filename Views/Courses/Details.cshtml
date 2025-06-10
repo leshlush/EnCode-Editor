@@ -28,6 +28,11 @@
             </button>
         </li>
     }
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="projects-tab" data-bs-toggle="tab" data-bs-target="#projects" type="button" role="tab" aria-controls="projects" aria-selected="false">
+            Projects
+        </button>
+    </li>
 </ul>
 
 <!-- Tab content -->
@@ -68,6 +73,9 @@
         <partial name="_UniversalTemplates" model="Model.UniversalTemplates" view-data="viewData" />
 
     </div>
+    <div class="tab-pane fade" id="projects" role="tabpanel" aria-labelledby="projects-tab">
+        <div id="courseProjectsContent" class="p-3 text-center text-muted">Loading projects...</div>
+    </div>
 </div>
 
 <!-- Bootstrap Modal for Template Details -->
@@ -100,6 +108,14 @@
     </div>
 </div>
 
+<style>
+    .project-card:hover {
+        box-shadow: 0 0 0 0.2rem #6366f1;
+        background: #f8fafc;
+        transition: box-shadow 0.2s, background 0.2s;
+    }
+</style>
+
 @section Scripts {
     <script>
             $(document).on('click', '.template-link', function(e) {
@@ -125,7 +141,13 @@
             });
         });
 
-
+        $(document).on('shown.bs.tab', '#projects-tab', function (e) {
+            var courseId = @Model.Id;
+            $('#courseProjectsContent').html('Loading projects...');
+            $.get('/Courses/CourseProjects', { id: courseId }, function (data) {
+                $('#courseProjectsContent').html(data);
+            });
+        });
 
         $(document).on('submit', '#createProjectForm', function(e) {
             e.preventDefault();

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using SnapSaves.Auth;
 using SnapSaves.Data;
 using SnapSaves.Models;
+using MongoDB.Driver;
 
 namespace SnapSaves.Controllers
 {
@@ -13,11 +14,13 @@ namespace SnapSaves.Controllers
     {
         private readonly AppIdentityDbContext _context;
         private readonly UserManager<AppUser> _userManager;
+        private readonly MongoDbContext _mongoDbContext;
 
-        public CoursesController(AppIdentityDbContext context, UserManager<AppUser> userManager)
+        public CoursesController(AppIdentityDbContext context, UserManager<AppUser> userManager, MongoDbContext mongoDbContext)
         {
             _context = context;
             _userManager = userManager;
+            _mongoDbContext = mongoDbContext;
         }
 
         [HttpGet]
@@ -72,6 +75,32 @@ namespace SnapSaves.Controllers
             course.UniversalTemplates = universalTemplates;
 
             return View(course);
+        }
+
+        [Authorize]
+        public async Task<PartialViewResult> CourseProjects(int id)
+        {
+            // id is the CourseId
+            var userId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return PartialView("_CourseProjects", Enumerable.Empty<Project>());
+
+            // Get all ProjectRecords for this user and course
+            var projectRecords = await _context.ProjectRecords
+                .Where(pr => pr.UserId == userId && pr.CourseId == id)
+                .ToListAsync();
+
+            var mongoIds = projectRecords.Select(pr => pr.MongoId).ToList();
+
+            // Fetch the actual projects from MongoDB
+            var projects = await _mongoDbContext.Projects
+                .Find(p => mongoIds.Contains(p.Id))
+                .ToListAsync();
+
+            // Order by most recently updated
+            projects = projects.OrderByDescending(p => p.LastModified).ToList();
+
+            return PartialView("_CourseProjects", projects);
         }
 
     }

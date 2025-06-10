@@ -1,0 +1,33 @@
+﻿@model IEnumerable<SnapSaves.Models.Project>
+
+@if (!Model.Any())
+{
+    <p>No projects found for this course.</p>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        @foreach (var project in Model)
+        {
+            // Get the current user's MongoUserId from claims
+            var userId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
+
+            <div class="col">
+                <a href="@Url.Action("Index", "SnapCode", new { projectId = project.Id, userId = userId })"
+                   class="text-decoration-none text-dark">
+                    <div class="card h-100 shadow-sm project-card" style="cursor:pointer;">
+                        <div class="card-body">
+                            <h5 class="card-title">@project.Name</h5>
+                            <p class="card-text text-muted mb-2">
+                                Last updated: @project.LastModified.ToLocalTime().ToString("g")
+                            </p>
+                            <p class="card-text">
+                                Created: @project.CreatedAt.ToLocalTime().ToString("d")
+                            </p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        }
+    </div>
+}
