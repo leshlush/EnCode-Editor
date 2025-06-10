@@ -18,6 +18,11 @@ namespace SnapSaves.Controllers
 
         public IActionResult Index()
         {
+            if(User.Identity.IsAuthenticated)
+            {
+                return RedirectToAction("Index", "Courses");
+            }
+
             var userCount = _context.Users.Count();
             ViewData["UserCount"] = userCount;
             return View();
