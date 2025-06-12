@@ -24,22 +24,30 @@ namespace SnapSaves.Controllers
         [HttpGet]
         public async Task<IActionResult> Index(string projectId, string userId, string projectName)
         {
-            if (string.IsNullOrEmpty(projectId) || string.IsNullOrEmpty(userId))
-            {
-                return BadRequest("Project ID or User ID is missing.");
-            }
+            // Get the authenticated user's MongoUserId from claims
+            var currentUserId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
+            if (string.IsNullOrEmpty(currentUserId))
+                return View("JdkError", "You do not have access to this project.");
 
-            // Fetch the project from MongoDB
+            // Only allow access to own projects
+            if (userId != currentUserId)
+                return View("JdkError", "You do not have access to this project.");
+
+            // Fetch the project for the current user
             var project = await _dbContext.Projects
-                .Find(p => p.Id == projectId && p.UserId == userId)
+                .Find(p => p.Id == projectId && p.UserId == currentUserId)
                 .FirstOrDefaultAsync();
 
             if (project == null)
+                return View("JdkError", "You do not have access to this project.");
+
+
+            if (string.IsNullOrEmpty(projectId) || string.IsNullOrEmpty(userId))
             {
-                return NotFound("Project not found or you do not have access to it.");
+                return View("JdkError", "You do not have access to this project.");
             }
 
-            foreach (var file in project.Files)
+          foreach (var file in project.Files)
             {
                 if (file.IsBinary && !IsBase64String(file.Content))
                 {
