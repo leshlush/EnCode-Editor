@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
-using SnapSaves.Data;
 using SnapSaves.Models;
 
 [ApiController]
@@ -15,35 +14,40 @@ public class ProjectsApiController : ControllerBase
     }
 
     [HttpPost("save")]
-    public async Task<IActionResult> SaveProject([FromBody] Project updatedProject)
+    public async Task<IActionResult> Save([FromBody] Project updatedProject)
     {
-        if (updatedProject == null || string.IsNullOrEmpty(updatedProject.Id))
-        {
-            Console.WriteLine("SaveProject: Invalid project data received.");
-            return BadRequest("Invalid project data.");
-        }
+        // 1. Get the current user's MongoUserId from claims
+        var currentUserId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
+        if (string.IsNullOrEmpty(currentUserId))
+            return Unauthorized("You must be logged in.");
 
-        var filter = Builders<Project>.Filter.Eq(p => p.Id, updatedProject.Id);
+        // 2. Fetch the project from MongoDB by ID
+        var project = await _dbContext.Projects
+            .Find(p => p.Id == updatedProject.Id)
+            .FirstOrDefaultAsync();
 
-        // Build the update definition
-        var updateDef = Builders<Project>.Update
-            .Set(p => p.Name, updatedProject.Name)
+        if (project == null)
+            return NotFound("Project not found.");
+
+        // 3. Verify ownership
+        if (project.UserId != currentUserId)
+            return Forbid("You do not have permission to modify this project.");
+
+        // 4. (Optional) Double-check the incoming payload's UserId matches the claim
+        if (updatedProject.UserId != currentUserId)
+            return BadRequest("UserId mismatch.");
+
+        // 5. Update the project (only allow fields you want to update)
+        // For example, update files and last modified:
+        var update = Builders<Project>.Update
             .Set(p => p.Files, updatedProject.Files)
             .Set(p => p.LastModified, DateTime.UtcNow);
 
-        // Only update InstructionsId if it is not null (explicitly set)
-        if (updatedProject.InstructionsId != null)
-            updateDef = updateDef.Set(p => p.InstructionsId, updatedProject.InstructionsId);
+        await _dbContext.Projects.UpdateOneAsync(
+            p => p.Id == updatedProject.Id,
+            update
+        );
 
-        var updateResult = await _dbContext.Projects.UpdateOneAsync(filter, updateDef);
-
-        if (updateResult.MatchedCount == 0)
-        {
-            Console.WriteLine($"SaveProject: Project with ID {updatedProject.Id} not found.");
-            return NotFound("Project not found.");
-        }
-
-        Console.WriteLine($"SaveProject: Project with ID {updatedProject.Id} updated successfully.");
-        return Ok(new { success = true });
+        return Ok("Project saved successfully.");
     }
 }
