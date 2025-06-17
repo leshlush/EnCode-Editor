@@ -908,7 +908,8 @@ function Java_cjdom_CanvasRenderingContext2D_paintStacksImpl(lib, contextJS, con
             case 14: save(); break;
             case 15: restore(); break;
             case 16: clearRect(); break;
-            default: System.out.println("Executor.exec: Unknown instruction"); break;
+            case 17: setImageQuality(); break;
+            default: console.log("CJDom.js-paintStacks: Unknown instruction"); break;
         }
     }
 }
@@ -1071,6 +1072,14 @@ function clearRect()
     var x = getDouble(); var y = getDouble();
     var w = getDouble(); var h = getDouble();
     _cntx.clearRect(x, y, w, h);
+}
+
+function setImageQuality()
+{
+    var quality = getDouble();
+    var qualityStr = quality > .67 ? "high" : quality >.33 ? "medium" : "low";
+    _cntx.imageSmoothingQuality = qualityStr;
+    _cntx.imageSmoothingEnabled = quality > .33;
 }
 
 function setShape()

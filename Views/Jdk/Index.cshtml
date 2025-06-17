@@ -29,8 +29,8 @@
 
 <div id="cheerpj-container"></div>
 
-<script src="https://cjrtnc.leaningtech.com/4.0/loader.js"></script>
-<script src="/Jdk/cjdom.js"></script>
+<script src="https://cjrtnc.leaningtech.com/20250604_2499/loader.js"></script>
+<script src="/Jdk/cjdom-17.js"></script>
 <script>
     const userId = '@userId';
 
@@ -204,13 +204,13 @@
             // No more clearing IndexedDB files store!
 
             // Initialize CheerpJ
-            var initParams = { version: 11, natives: cjdomNativeMethods };
-            var classPath = "/app/Jdk/CJDom-2025.05.jar:" +
-                            "/app/Jdk/SnapCJ-2025.05.jar:" +
-                            "/app/Jdk/SnapKit-2025.05.jar:" +
-                            "/app/Jdk/SnapCode-2025.05.jar:" +
-                            "/app/Jdk/jdk.compiler.jar:" +
-                            "/app/Jdk/SnapBuilder-2025.05.jar:" +
+            var initParams = { version: 17, natives: cjdomNativeMethods };
+            var classPath = "/app/Jdk/CJDom-2025.06.jar:" +
+                            "/app/Jdk/SnapCJ-2025.06.jar:" +
+                            "/app/Jdk/SnapKit-2025.06.jar:" +
+                            "/app/Jdk/SnapCode-2025.06.jar:" +
+                            "/app/Jdk/jdk.compiler_17.jar:" +
+                            "/app/Jdk/SnapBuilder-2025.06.jar:" +
                             "/app/Jdk/Greenfoot-2025.06.jar";
 
             await cheerpjInit(initParams);
