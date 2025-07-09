@@ -22,6 +22,7 @@ namespace SnapSaves.Data
         public DbSet<Instructions> Instructions { get; set; }
         public DbSet<TemplateProject> TemplateProjects { get; set; }
         public DbSet<ProjectRecord> ProjectRecords { get; set; }
+        public DbSet<ProjectShareLink> ProjectShareLinks { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -63,12 +64,22 @@ namespace SnapSaves.Data
             builder.Entity<Instructions>().ToTable("instructions");
             builder.Entity<ProjectRecord>().ToTable("projectrecords");
 
+            builder.Entity<ProjectShareLink>(entity =>
+            {
+                entity.ToTable("projectsharelinks");
+                entity.HasKey(l => l.Id);
+                entity.Property(l => l.ProjectMongoId).IsRequired().HasMaxLength(255);
+                entity.Property(l => l.Token).IsRequired().HasMaxLength(128);
+                entity.Property(l => l.IsActive).HasDefaultValue(true);
+            });
+
             // Configure Template
             builder.Entity<Template>(entity =>
             {
                 entity.Property(t => t.MongoId).IsRequired().HasMaxLength(255);
                 entity.Property(t => t.Name).IsRequired();
                 entity.Property(t => t.Description).IsRequired();
+                entity.Property(t => t.AllowAnonynousAccess).HasDefaultValue(false);
             });
 
             // Configure CourseTemplate
