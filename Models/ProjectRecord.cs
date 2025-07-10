@@ -12,7 +12,7 @@ namespace SnapSaves.Models
         public string MongoId { get; set; } = string.Empty;
 
         [Required]
-        public string UserId { get; set; } = string.Empty;
+        public string? UserId { get; set; } = string.Empty;
 
         public int? CourseId { get; set; }
 

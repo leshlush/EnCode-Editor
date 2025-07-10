@@ -73,6 +73,52 @@ namespace SnapSaves.Controllers
             return View();
         }
 
+        [HttpGet]
+        public async Task<IActionResult> ReadOnly(string projectId, string? shareToken = null)
+        {
+            // Fetch the project from MongoDB
+            var project = await _dbContext.Projects
+                .Find(p => p.Id == projectId)
+                .FirstOrDefaultAsync();
+
+            if (project == null)
+                return View("JdkError", "Project not found or you do not have access to it.");
+
+            // Check if user is logged in and is the owner
+            var currentUserId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
+            if (!string.IsNullOrEmpty(currentUserId) && project.UserId == currentUserId)
+            {
+                // Owner: show normal (editable) view
+                return await Index(projectId, currentUserId, project.Name);
+            }
+
+            // (Optional) Validate shareToken here if you want to restrict anonymous access
+
+           
+            foreach (var file in project.Files)
+            {
+                if (file.IsBinary && !IsBase64String(file.Content))
+                {
+                    var bytes = System.Text.Encoding.UTF8.GetBytes(file.Content);
+                    file.Content = Convert.ToBase64String(bytes);
+                }
+            }
+
+            var projectJson = JsonConvert.SerializeObject(project, new JsonSerializerSettings
+            {
+                StringEscapeHandling = StringEscapeHandling.EscapeHtml
+            });
+
+            ViewData["ProjectJson"] = projectJson;
+            ViewData["ProjectId"] = projectId;
+            ViewData["UserId"] = project.UserId;
+            ViewData["ProjectName"] = project.Name;
+            ViewData["ReadOnly"] = true; 
+
+            return View("Index");
+        }
+
+
         private static bool IsBase64String(string s)
         {
             if (string.IsNullOrWhiteSpace(s))

@@ -5,6 +5,7 @@
     var projectId = ViewData["ProjectId"] as string;
     var userId = ViewData["UserId"] as string;
 	var projectName = ViewData["ProjectName"] as string ?? "Project";
+	var isReadOnly = (ViewData["IsReadOnly"] as bool?) == true;
 }
 
 <style>
@@ -32,6 +33,7 @@
 <script src="https://cjrtnc.leaningtech.com/20250604_2499/loader.js"></script>
 <script src="/Jdk/cjdom-17.js"></script>
 <script>
+	const isReadOnly = @isReadOnly.ToString().ToLower();
     const userId = '@userId';
 
     // --- Utility: Convert Uint8Array to base64 in chunks ---
@@ -174,7 +176,21 @@
         return project;
     }
 
+    function getProjectInfoForShareLink(callback) {
+        // You can use the variables already available in the view
+        callback({
+            userId: '@userId',
+            projectId: '@projectId'
+        });
+    }
+    // Make it accessible from parent
+    window.getProjectInfoForShareLink = getProjectInfoForShareLink;
+
     async function saveProject() {
+        if (typeof isReadOnly !== "undefined" && isReadOnly) {
+            alert("This project is read-only. Saving is disabled.");
+            return;
+        }
         const projectId = '@projectId';
         const projectName = '@projectName';
 

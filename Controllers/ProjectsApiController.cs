@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
+using SnapSaves.Data;
 using SnapSaves.Models;
 
 [ApiController]
@@ -7,10 +8,12 @@ using SnapSaves.Models;
 public class ProjectsApiController : ControllerBase
 {
     private readonly MongoDbContext _dbContext;
+    private readonly AppIdentityDbContext _identityDbContext;
 
-    public ProjectsApiController(MongoDbContext dbContext)
+    public ProjectsApiController(MongoDbContext dbContext, AppIdentityDbContext identityDbContext)
     {
         _dbContext = dbContext;
+        _identityDbContext = identityDbContext;
     }
 
     [HttpPost("save")]
@@ -49,5 +52,46 @@ public class ProjectsApiController : ControllerBase
         );
 
         return Ok("Project saved successfully.");
+    }
+
+    [HttpPost("create-sharelink")]
+    public async Task<IActionResult> CreateShareLink([FromBody] CreateShareLinkRequest request)
+    {
+        // Validate user
+        var currentUserId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
+        if (string.IsNullOrEmpty(currentUserId) || request.UserId != currentUserId)
+            return Forbid("You do not have permission to create a share link for this project.");
+
+        // Validate project ownership
+        var project = await _dbContext.Projects.Find(p => p.Id == request.ProjectId && p.UserId == currentUserId).FirstOrDefaultAsync();
+        if (project == null)
+            return NotFound("Project not found or you do not have permission.");
+
+        // Generate a secure token
+        var token = Guid.NewGuid().ToString("N");
+
+        // Create and save the share link
+        var shareLink = new ProjectShareLink
+        {
+            ProjectMongoId = request.ProjectId,
+            Token = token,
+            CreatedAt = DateTime.UtcNow,
+            IsActive = true,
+            CreatedByUserId = currentUserId
+        };
+        _identityDbContext.ProjectShareLinks.Add(shareLink);
+        await _identityDbContext.SaveChangesAsync();
+
+        // Build the shareable URL (SnapCode ReadOnly action)
+        var url = Url.Action("ReadOnly", "SnapCode", new { projectId = request.ProjectId, shareToken = token }, Request.Scheme);
+
+        return Ok(new { url });
+    }
+
+    // DTO for request
+    public class CreateShareLinkRequest
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string ProjectId { get; set; } = string.Empty;
     }
 }

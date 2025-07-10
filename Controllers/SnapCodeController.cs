@@ -57,5 +57,46 @@ namespace SnapSaves.Controllers
                 return View("Index", project);
             }
         }
+
+        [HttpGet]
+        public async Task<IActionResult> ReadOnly(string projectId, string? shareToken = null)
+        {
+            // Fetch the project from MongoDB
+            var project = await _mongoDbContext.Projects.Find(p => p.Id == projectId).FirstOrDefaultAsync();
+            if (project == null)
+                return NotFound();
+
+            // Try to get instructions (if any)
+            Instructions? instructions = null;
+            string? instructionsPath = null;
+
+            if (!string.IsNullOrEmpty(project.InstructionsId))
+            {
+                instructions = await _dbContext.Instructions.FindAsync(project.InstructionsId);
+                if (instructions != null && instructions.Type == InstructionsType.Static)
+                {
+                    instructionsPath = "/" + instructions.Location.Replace("\\", "/");
+                }
+                project.Instructions = instructions;
+            }
+
+            ViewData["ProjectId"] = projectId;
+            ViewData["UserId"] = project.UserId;
+            ViewData["ProjectName"] = project.Name;
+            ViewData["IsReadOnly"] = true;
+            ViewData["ShareToken"] = shareToken;
+
+            if (!string.IsNullOrEmpty(instructionsPath))
+            {
+                ViewData["ShowInstructionsButtons"] = true;
+                ViewData["InstructionsPath"] = instructionsPath;
+                return View("ProjectWithInstructions", project);
+            }
+            else
+            {
+                ViewData["ShowInstructionsButtons"] = false;
+                return View("Index", project);
+            }
+        }
     }
 }

@@ -5,12 +5,17 @@
     var userId = ViewData["UserId"] as string;
     var instructionsId = ViewData["InstructionsId"] as string ?? Model?.InstructionsId;
     var instructionsUrl = ViewData["InstructionsUrl"] as string;
-	var projectName = ViewData["ProjectName"] as string ?? Model?.Name ?? "Project";
+    var projectName = ViewData["ProjectName"] as string ?? Model?.Name ?? "Project";
+    var isReadOnly = ViewData["IsReadOnly"] as bool? ?? false;
+    var shareToken = ViewData["ShareToken"] as string;
     // Fallback: if instructionsUrl is not set, try to build it from Model.Instructions.Location
     if (string.IsNullOrEmpty(instructionsUrl) && Model?.Instructions != null && !string.IsNullOrEmpty(Model.Instructions.Location))
     {
         instructionsUrl = "/" + Model.Instructions.Location.Replace("\\", "/").TrimStart('/');
     }
+    var jdkUrl = isReadOnly
+        ? Url.Action("ReadOnly", "Jdk", new { projectId = projectId, shareToken = shareToken })
+        : Url.Action("Index", "Jdk", new { projectId = projectId, userId = userId, projectName = projectName });
 }
 
 <div id="snapcode-container">
@@ -18,7 +23,7 @@
             src="@(string.IsNullOrEmpty(instructionsUrl) ? Url.Action("Placeholder", "Instructions") : instructionsUrl)">
     </iframe>
     <iframe id="jdk-iframe"
-            src="@Url.Action("Index", "Jdk", new { projectId = projectId, userId = userId })">
+            src="@jdkUrl">
     </iframe>
 </div>
 
@@ -70,12 +75,47 @@
         }
     }
 
-        function saveProject() {
+    function saveProject() {
         var jdkFrame = document.getElementById('jdk-iframe');
         if (jdkFrame && jdkFrame.contentWindow && typeof jdkFrame.contentWindow.saveProject === 'function') {
             jdkFrame.contentWindow.saveProject();
         } else {
             alert('Save function not available in JDK view.');
+        }
+    }
+
+     function createShareLink() {
+        var jdkFrame = document.getElementById('jdk-iframe');
+        if (jdkFrame && jdkFrame.contentWindow && typeof jdkFrame.contentWindow.getProjectInfoForShareLink === 'function') {
+            // Ask the JDK iframe for project info (userId, projectId)
+            jdkFrame.contentWindow.getProjectInfoForShareLink(function(projectInfo) {
+                if (!projectInfo || !projectInfo.userId || !projectInfo.projectId) {
+                    alert('Could not get project info for share link.');
+                    return;
+                }
+                // Call the API to create the share link
+                fetch('/api/ProjectsApi/create-sharelink', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: projectInfo.userId,
+                        projectId: projectInfo.projectId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.url) {
+                        window.prompt('Share link created! Copy this URL:', data.url);
+                    } else {
+                        alert('Failed to create share link: ' + (data.message || 'Unknown error'));
+                    }
+                })
+                .catch(err => {
+                    alert('Error creating share link: ' + err);
+                });
+            });
+        } else {
+            alert('Share link function not available in JDK view.');
         }
     }
 </script>
