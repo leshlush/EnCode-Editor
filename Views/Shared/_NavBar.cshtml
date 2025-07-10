@@ -42,16 +42,21 @@
             @* Centered SnapCode-specific buttons *@
             @if (isSnapCode && isIndexAction)
             {
-                <div class="d-flex justify-content-center w-100">
-                    @if (showInstructionsButtons)
-                    {
-                        <button class="btn btn-outline-primary me-2" onclick="setView('split')">Split View</button>
-                        <button class="btn btn-outline-primary me-2" onclick="setView('instructions')">Instructions Only</button>
-                        <button class="btn btn-outline-primary me-2" onclick="setView('jdk')">Editor Only</button>
-                    }
-                    <button class="btn btn-success" id="saveProjectBtn" onclick="saveProject()">Save</button>
-                    <button class="btn btn-outline-secondary" id="createShareLinkBtn" onclick="createShareLink()">Create Share Link</button>
-                    <button class="btn btn-outline-info ms-2" id="viewShareLinkBtn" onclick="viewShareLink()">View Share Link</button>
+                <div class="d-flex justify-content-center w-100 align-items-center">
+                    <div class="btn-group" role="group" aria-label="View Buttons">
+                        @if (showInstructionsButtons)
+                        {
+                            <button class="btn btn-outline-primary me-2" onclick="setView('split')">Split View</button>
+                            <button class="btn btn-outline-primary me-2" onclick="setView('instructions')">Instructions Only</button>
+                            <button class="btn btn-outline-primary" onclick="setView('jdk')">Editor Only</button>
+                        }
+                    </div>
+                    <div style="width:2rem;"></div> <!-- Big gap between groups -->
+                    <div class="btn-group" role="group" aria-label="Action Buttons">
+                        <button class="btn btn-success me-2" id="saveProjectBtn" onclick="saveProject()">Save</button>
+                        <button class="btn btn-outline-secondary me-2" id="createShareLinkBtn" onclick="createShareLink()">Create Share Link</button>
+                        <button class="btn btn-outline-info" id="viewShareLinkBtn" onclick="viewShareLink()">View Share Link</button>
+                    </div>
                 </div>
             }
 
