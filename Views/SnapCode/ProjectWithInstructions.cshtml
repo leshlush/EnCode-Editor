@@ -84,6 +84,32 @@
         }
     }
 
+        function viewShareLink() {
+        var jdkFrame = document.getElementById('jdk-iframe');
+        if (jdkFrame && jdkFrame.contentWindow && typeof jdkFrame.contentWindow.getProjectInfoForShareLink === 'function') {
+            jdkFrame.contentWindow.getProjectInfoForShareLink(function(projectInfo) {
+                if (!projectInfo || !projectInfo.projectId) {
+                    alert('Could not get project info for share link.');
+                    return;
+                }
+                fetch('/api/ProjectsApi/get-sharelink?projectId=' + encodeURIComponent(projectInfo.projectId))
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.url) {
+                            window.prompt('Your share link:', data.url);
+                        } else {
+                            alert('No share link found for this project.');
+                        }
+                    })
+                    .catch(err => {
+                        alert('Error retrieving share link: ' + err);
+                    });
+            });
+        } else {
+            alert('Share link function not available in JDK view.');
+        }
+    }
+
      function createShareLink() {
         var jdkFrame = document.getElementById('jdk-iframe');
         if (jdkFrame && jdkFrame.contentWindow && typeof jdkFrame.contentWindow.getProjectInfoForShareLink === 'function') {

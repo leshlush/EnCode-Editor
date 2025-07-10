@@ -88,6 +88,32 @@ public class ProjectsApiController : ControllerBase
         return Ok(new { url });
     }
 
+    [HttpGet("get-sharelink")]
+    public async Task<IActionResult> GetShareLink([FromQuery] string projectId)
+    {
+        // Validate user
+        var currentUserId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
+        if (string.IsNullOrEmpty(currentUserId))
+            return Unauthorized("You must be logged in.");
+
+        // Validate project ownership
+        var project = await _dbContext.Projects.Find(p => p.Id == projectId && p.UserId == currentUserId).FirstOrDefaultAsync();
+        if (project == null)
+            return NotFound("Project not found or you do not have permission.");
+
+        // Find the most recent active share link
+        var shareLink = _identityDbContext.ProjectShareLinks
+            .Where(l => l.ProjectMongoId == projectId && l.IsActive)
+            .OrderByDescending(l => l.CreatedAt)
+            .FirstOrDefault();
+
+        if (shareLink == null)
+            return NotFound("No share link found.");
+
+        var url = Url.Action("ReadOnly", "SnapCode", new { projectId = projectId, shareToken = shareLink.Token }, Request.Scheme);
+        return Ok(new { url });
+    }
+
     // DTO for request
     public class CreateShareLinkRequest
     {
