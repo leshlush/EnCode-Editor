@@ -40,7 +40,7 @@
             </ul>
 
             @* Centered SnapCode-specific buttons *@
-            @if (isSnapCode && isIndexAction)
+            @if (isSnapCode)
             {
                 <div class="d-flex justify-content-center w-100 align-items-center">
                     <div class="btn-group" role="group" aria-label="View Buttons">
@@ -51,12 +51,15 @@
                             <button class="btn btn-outline-primary" onclick="setView('jdk')">Editor Only</button>
                         }
                     </div>
-                    <div style="width:2rem;"></div> <!-- Big gap between groups -->
-                    <div class="btn-group" role="group" aria-label="Action Buttons">
-                        <button class="btn btn-success me-2" id="saveProjectBtn" onclick="saveProject()">Save</button>
-                        <button class="btn btn-outline-secondary me-2" id="createShareLinkBtn" onclick="createShareLink()">Create Share Link</button>
-                        <button class="btn btn-outline-secondary me-2" id="viewShareLinkBtn" onclick="viewShareLink()">View Share Link</button>
-                    </div>
+                    @if(isSnapCode && isIndexAction)
+                    {
+                        <div style="width:2rem;"></div> 
+                        <div class="btn-group" role="group" aria-label="Action Buttons">
+                            <button class="btn btn-success me-2" id="saveProjectBtn" onclick="saveProject()">Save</button>
+                            <button class="btn btn-outline-secondary me-2" id="createShareLinkBtn" onclick="createShareLink()">Create Share Link</button>
+                            <button class="btn btn-outline-secondary me-2" id="viewShareLinkBtn" onclick="viewShareLink()">View Share Link</button>
+                        </div>
+                    }
                 </div>
             }
 
