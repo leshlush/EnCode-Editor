@@ -116,28 +116,6 @@ namespace SnapSaves.Controllers
         [HttpGet]
         public async Task<IActionResult> StudentProject(string projectId)
         {
-            var currentUser = await _userManager.GetUserAsync(User);
-            if (currentUser == null)
-                return Forbid();
-
-            // Check permission
-            if (!await _permissionHelper.UserHasPermissionAsync(currentUser, "ViewStudentProjects"))
-                return Forbid();
-
-            // Get ProjectRecord for this project
-            var projectRecord = await _dbContext.ProjectRecords
-                .FirstOrDefaultAsync(pr => pr.MongoId == projectId);
-
-            if (projectRecord == null || projectRecord.CourseId == null)
-                return NotFound("Project or course not found.");
-
-            // Check if current user is in the same course (as teacher/manager)
-            var userCourse = await _dbContext.UserCourses
-                .FirstOrDefaultAsync(uc => uc.UserId == currentUser.Id && uc.CourseId == projectRecord.CourseId);
-
-            if (userCourse == null)
-                return Forbid();
-
             // Fetch the project from MongoDB
             var project = await _mongoDbContext.Projects.Find(p => p.Id == projectId).FirstOrDefaultAsync();
             if (project == null)
