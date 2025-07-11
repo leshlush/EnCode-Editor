@@ -101,7 +101,8 @@ namespace SnapSaves.Helpers
         new Permission { Name = "ViewCourses" },
         new Permission { Name = "EditCourses" },
         new Permission { Name = "ViewStudents" },
-        new Permission { Name = "ViewTeachers" }
+        new Permission { Name = "ViewTeachers" },
+        new Permission { Name = "ViewStudentProjects" }
     };
 
             foreach (var permission in permissions)
@@ -118,9 +119,9 @@ namespace SnapSaves.Helpers
             var studentRole = await _roleManager.FindByNameAsync("Student");
             var managerRole = await _roleManager.FindByNameAsync("Manager"); 
 
-            var teacherPermissions = new[] { "ViewCourses", "EditCourses", "ViewStudents" };
+            var teacherPermissions = new[] { "ViewCourses", "EditCourses", "ViewStudents", "ViewStudentProjects" };
             var studentPermissions = new[] { "ViewCourses" };
-            var managerPermissions = new[] { "ViewCourses", "EditCourses", "ViewStudents", "ViewTeachers" };
+            var managerPermissions = new[] { "ViewCourses", "EditCourses", "ViewStudents", "ViewTeachers", "ViewStudentProjects" };
 
             foreach (var permissionName in teacherPermissions)
             {

@@ -6,7 +6,12 @@
         @foreach (var project in Model)
         {
             <li>
-                <strong>@project.Name</strong> (Created: @project.CreatedAt.ToShortDateString())
+                <a href="@Url.Action("StudentProject", "SnapCode", new { projectId = project.Id })"
+                   target="_blank"
+                   class="student-project-link">
+                    <strong>@project.Name</strong>
+                </a>
+                (Created: @project.CreatedAt.ToShortDateString())
             </li>
         }
     </ul>
