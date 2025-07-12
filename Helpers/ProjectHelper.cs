@@ -198,5 +198,61 @@ namespace SnapSaves.Helpers
                     return true;
             return false;
         }
+
+        public async Task<(bool Success, string ErrorMessage, Project? Project)> CopyProjectAsync(string projectId, string userId, int? courseId = null)
+        {
+            // 1. Fetch the existing project from MongoDB
+            var existingProject = await _dbContext.Projects.Find(p => p.Id == projectId).FirstOrDefaultAsync();
+            if (existingProject == null)
+                return (false, "Original project not found.", null);
+
+            // 2. Create a deep copy and update fields
+            var newProject = new Project
+            {
+                Name = existingProject.Name + " (Copy)",
+                UserId = userId,
+                CreatedAt = DateTime.UtcNow,
+                LastModified = DateTime.UtcNow,
+                Files = existingProject.Files
+                    .Select(f => new ProjectFile
+                    {
+                        Path = f.Path, // We'll update with new ID after insert
+                        Content = f.Content,
+                        IsDirectory = f.IsDirectory,
+                        IsBinary = f.IsBinary
+                    }).ToList(),
+                InstructionsId = existingProject.InstructionsId
+            };
+
+            // 3. Insert the new project to get a new Id
+            await _dbContext.Projects.InsertOneAsync(newProject);
+
+            // 4. Update file paths to use the new project Id
+            var newProjectId = newProject.Id;
+            newProject.Files = existingProject.Files
+                .Select(f => new ProjectFile
+                {
+                    Path = ReplaceProjectIdInPath(f.Path, existingProject.Id, newProjectId),
+                    Content = f.Content,
+                    IsDirectory = f.IsDirectory,
+                    IsBinary = f.IsBinary
+                }).ToList();
+
+            // 5. Update the project in MongoDB with the new file paths
+            await _dbContext.Projects.ReplaceOneAsync(p => p.Id == newProjectId, newProject);
+
+            // 6. Create a new ProjectRecord in MySQL
+            var projectRecord = new ProjectRecord
+            {
+                MongoId = newProjectId,
+                UserId = userId,
+                CourseId = courseId,
+                CreatedAt = newProject.CreatedAt
+            };
+            _identityDbContext.ProjectRecords.Add(projectRecord);
+            await _identityDbContext.SaveChangesAsync();
+
+            return (true, "", newProject);
+        }
     }
 }
