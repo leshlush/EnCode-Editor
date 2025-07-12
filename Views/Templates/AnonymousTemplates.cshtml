@@ -1,0 +1,23 @@
+﻿@model IEnumerable<SnapSaves.Models.Template>
+
+@{
+    ViewData["Title"] = "Anonymous Templates";
+}
+
+<h1>Anonymous Templates</h1>
+<p>These templates can be used without logging in. Your work will not be saved unless you create a share link.</p>
+
+<ul class="list-group">
+    @foreach (var template in Model)
+    {
+        <li class="list-group-item">
+            <strong>@template.Name</strong>
+            <div class="text-muted">@template.Description</div>
+            <form asp-controller="Projects" asp-action="CreateAnonymousFromUniversalTemplate" method="post" style="display:inline;">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="templateId" value="@template.MongoId" />
+                <button type="submit" class="btn btn-primary btn-sm mt-2">Start Without Login</button>
+            </form>
+        </li>
+    }
+</ul>

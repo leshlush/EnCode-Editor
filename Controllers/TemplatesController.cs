@@ -73,5 +73,16 @@ namespace SnapSaves.Controllers
 
             return PartialView("_DetailsPartial", viewModel);
         }
+
+        [AllowAnonymous]
+        [HttpGet]
+        public async Task<IActionResult> AnonymousTemplates()
+        {
+            var templates = await _dbContext.Templates
+                .Where(t => t.IsUniversal == true && t.AllowAnonymousAccess == true)
+                .ToListAsync();
+
+            return View("AnonymousTemplates", templates);
+        }
     }
 }

@@ -36,6 +36,10 @@
                         @Html.AntiForgeryToken()
                         <button type="submit" class="btn btn-primary btn-sm">Create Project</button>
                     </form>
+                    <form asp-controller="Admin" asp-action="SetTemplateAnonymousAccess" method="post" style="display:inline;">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="templateId" value="@template.Id" />
+                    </form>
                     <!-- New: Update Instructions Button -->
                     <button type="button" class="btn btn-secondary btn-sm" onclick="showUpdateInstructionsModal(@template.Id)">Update Instructions</button>
                 </li>
@@ -52,6 +56,10 @@
             <div class="mb-3">
                 <label for="projectDescription" class="form-label">Project Description:</label>
                 <textarea class="form-control" id="projectDescription" name="projectDescription" rows="3" required></textarea>
+            </div>
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="allowAnonymousAccess" name="allowAnonymousAccess" value="true">
+                <label class="form-check-label" for="allowAnonymousAccess">Allow Anonymous Access</label>
             </div>
             <div class="mb-3 form-check">
                 <input type="checkbox" class="form-check-input" id="hasInstructions" name="hasInstructions" value="true" onchange="toggleInstructionsUpload()">

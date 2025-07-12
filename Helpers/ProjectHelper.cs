@@ -8,25 +8,23 @@ namespace SnapSaves.Helpers
     public class ProjectHelper
     {
         private readonly MongoDbContext _dbContext;
+        private readonly AppIdentityDbContext _identityDbContext;
         private static readonly HashSet<string> AlwaysTextExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             ".snapcode", ".txt", ".xml", ".md", ".csv", ".html", ".htm", ".js", ".css"
         };
 
-
-        public ProjectHelper(MongoDbContext dbContext)
+        public ProjectHelper(MongoDbContext dbContext, AppIdentityDbContext identityDbContext)
         {
             _dbContext = dbContext;
+            _identityDbContext = identityDbContext;
         }
 
         public async Task<Project> CreateProjectFromDirectoryAsync(string directoryPath, string userId)
         {
             if (!Directory.Exists(directoryPath))
-            {
                 throw new DirectoryNotFoundException($"The directory '{directoryPath}' does not exist.");
-            }
 
-            // Step 1: Create a blank project in MongoDB
             var newProject = new Project
             {
                 Name = Path.GetFileName(directoryPath),
@@ -38,17 +36,12 @@ namespace SnapSaves.Helpers
 
             await _dbContext.Projects.InsertOneAsync(newProject);
 
-            // Step 2: Get the projectId from MongoDB
             var projectId = newProject.Id;
             if (string.IsNullOrEmpty(projectId))
-            {
                 throw new Exception("Failed to retrieve the project ID after insertion.");
-            }
 
-            // Step 3: Build the project files recursively
             var projectFiles = BuildProjectFiles(directoryPath, projectId);
 
-            // Step 4: Update the project with the files
             newProject.Files = projectFiles;
             await _dbContext.Projects.ReplaceOneAsync(p => p.Id == projectId, newProject);
 
@@ -66,7 +59,6 @@ namespace SnapSaves.Helpers
             {
                 var (currentPath, parentPath) = stack.Pop();
 
-                // Process files in the current directory
                 var files = Directory.GetFiles(currentPath);
                 foreach (var file in files)
                 {
@@ -88,7 +80,6 @@ namespace SnapSaves.Helpers
                     });
                 }
 
-                // Process subdirectories
                 var directories = Directory.GetDirectories(currentPath);
                 foreach (var directory in directories)
                 {
@@ -108,17 +99,60 @@ namespace SnapSaves.Helpers
             return projectFiles;
         }
 
-
         public async Task<(bool Success, string ErrorMessage, Project? Project)> CreateProjectFromTemplateAsync(
-    Template template, string userId, string? customName = null)
+            Template template, string userId, string? customName = null)
         {
-            // Fetch the template project from MongoDB
             var templateProject = await _dbContext.TemplateProjects.Find(t => t.Id == template.MongoId).FirstOrDefaultAsync();
             if (templateProject == null)
                 return (false, "Template project not found in MongoDB.", null);
 
-            // Create a new project for the user (to get a new project ID)
-            var newProject = new Project
+            var newProject = CreateProjectInstance(template, templateProject, userId, customName);
+
+            await _dbContext.Projects.InsertOneAsync(newProject);
+
+            newProject.Files = CopyTemplateFiles(templateProject, newProject.Id);
+            await _dbContext.Projects.ReplaceOneAsync(p => p.Id == newProject.Id, newProject);
+
+            return (true, "", newProject);
+        }
+
+        public async Task<(bool Success, string ErrorMessage, Project? Project)> CreateAnonymousProjectFromUniversalTemplateAsync(string templateId)
+        {
+            var template = _identityDbContext.Templates.FirstOrDefault(t =>
+                t.MongoId == templateId &&
+                t.IsUniversal == true &&
+                t.AllowAnonymousAccess == true);
+
+            if (template == null)
+                return (false, "Template not found or not available for anonymous users.", null);
+
+            var templateProject = await _dbContext.TemplateProjects.Find(t => t.Id == template.MongoId).FirstOrDefaultAsync();
+            if (templateProject == null)
+                return (false, "Template project not found in MongoDB.", null);
+
+            var newProject = CreateProjectInstance(template, templateProject, null, template.Name + " (Anonymous Copy)");
+
+            await _dbContext.Projects.InsertOneAsync(newProject);
+
+            newProject.Files = CopyTemplateFiles(templateProject, newProject.Id);
+            await _dbContext.Projects.ReplaceOneAsync(p => p.Id == newProject.Id, newProject);
+
+            var projectRecord = new ProjectRecord
+            {
+                MongoId = newProject.Id,
+                UserId = null,
+                CourseId = null,
+                CreatedAt = newProject.CreatedAt
+            };
+            _identityDbContext.ProjectRecords.Add(projectRecord);
+            await _identityDbContext.SaveChangesAsync();
+
+            return (true, "", newProject);
+        }
+
+        private Project CreateProjectInstance(Template template, Project templateProject, string? userId, string? customName)
+        {
+            return new Project
             {
                 Name = string.IsNullOrWhiteSpace(customName) ? template.Name + " (Copy)" : customName,
                 UserId = userId,
@@ -127,42 +161,34 @@ namespace SnapSaves.Helpers
                 Files = new List<ProjectFile>(),
                 InstructionsId = template.InstructionsId
             };
+        }
 
-            await _dbContext.Projects.InsertOneAsync(newProject);
-
-            var newProjectId = newProject.Id;
+        private List<ProjectFile> CopyTemplateFiles(Project templateProject, string newProjectId)
+        {
             var oldProjectId = templateProject.Id;
-
-            // Copy files, replacing the old projectId in the path with the new one (robustly)
-            newProject.Files = templateProject.Files.Select(f => new ProjectFile
+            return templateProject.Files.Select(f => new ProjectFile
             {
                 Path = ReplaceProjectIdInPath(f.Path, oldProjectId, newProjectId),
                 Content = f.Content,
                 IsDirectory = f.IsDirectory,
                 IsBinary = f.IsBinary
             }).ToList();
-
-            // Update the project with the new files
-            await _dbContext.Projects.ReplaceOneAsync(p => p.Id == newProjectId, newProject);
-
-            return (true, "", newProject);
         }
 
         private static string ReplaceProjectIdInPath(string path, string oldId, string newId)
         {
-            // Handles /oldId, /oldId/, /oldId/something, etc.
             if (path == $"/{oldId}")
                 return $"/{newId}";
             if (path.StartsWith($"/{oldId}/"))
                 return $"/{newId}/{path.Substring(oldId.Length + 2)}";
-            // fallback: replace any occurrence (should rarely be needed)
             return path.Replace(oldId, newId);
         }
+
         private static bool IsBinaryFile(string filePath)
         {
             var ext = Path.GetExtension(filePath);
             if (AlwaysTextExtensions.Contains(ext))
-                return false; // Always treat as text
+                return false;
 
             using var stream = System.IO.File.OpenRead(filePath);
             var buffer = new byte[8000];
@@ -172,6 +198,5 @@ namespace SnapSaves.Helpers
                     return true;
             return false;
         }
-
     }
 }

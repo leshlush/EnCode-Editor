@@ -329,5 +329,23 @@ namespace SnapSaves.Controllers
             // fallback: replace any occurrence (should rarely be needed)
             return path.Replace(oldId, newId);
         }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateAnonymousFromUniversalTemplate(string templateId)
+        {
+            // Ensure the user is not logged in
+            if (User.Identity?.IsAuthenticated == true)
+                return Forbid("You must be logged out to use this feature.");
+
+            var result = await _projectHelper.CreateAnonymousProjectFromUniversalTemplateAsync(templateId);
+
+            if (!result.Success || result.Project == null)
+                return BadRequest(result.ErrorMessage);
+
+            // Redirect to a read-only or special anonymous project view
+            return RedirectToAction("ReadOnly", "SnapCode", new { projectId = result.Project.Id });
+        }
     }
 }

@@ -9,7 +9,7 @@ namespace SnapSaves.Models
         public string Name { get; set; } = string.Empty; // Template name
         public string Description { get; set; } = string.Empty; // Template description
         public bool? IsUniversal { get; set; }
-        public bool? AllowAnonynousAccess { get; set; }
+        public bool? AllowAnonymousAccess { get; set; }
 
         public string? InstructionsId { get; set; }
         [NotMapped]

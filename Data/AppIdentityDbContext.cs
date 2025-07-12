@@ -79,7 +79,7 @@ namespace SnapSaves.Data
                 entity.Property(t => t.MongoId).IsRequired().HasMaxLength(255);
                 entity.Property(t => t.Name).IsRequired();
                 entity.Property(t => t.Description).IsRequired();
-                entity.Property(t => t.AllowAnonynousAccess).HasDefaultValue(false);
+                entity.Property(t => t.AllowAnonymousAccess).HasDefaultValue(false);
             });
 
             // Configure CourseTemplate

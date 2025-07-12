@@ -32,11 +32,13 @@ namespace SnapSaves.Controllers
         [HttpPost]
         [RequestSizeLimit(104_857_600)]
         public async Task<IActionResult> UploadUniversalTemplate(
-    [FromForm] IFormFile templateZip,
-    [FromForm] string projectName,
-    [FromForm] string projectDescription,
-    [FromForm] bool hasInstructions,
-    [FromForm] IFormFile? instructionsZip)
+     [FromForm] IFormFile templateZip,
+     [FromForm] string projectName,
+     [FromForm] string projectDescription,
+     [FromForm] bool hasInstructions,
+     [FromForm] IFormFile? instructionsZip,
+     [FromForm] bool allowAnonymousAccess // <-- Added this parameter
+ )
         {
             if (templateZip == null || templateZip.Length == 0)
             {
@@ -115,6 +117,11 @@ namespace SnapSaves.Controllers
                 {
                     return BadRequest("Failed to create universal template.");
                 }
+
+                // Set AllowAnonymousAccess from the form
+                template.AllowAnonymousAccess = allowAnonymousAccess;
+                _context.Templates.Update(template);
+                await _context.SaveChangesAsync();
 
                 if (!string.IsNullOrEmpty(instructionsId))
                 {
@@ -296,6 +303,21 @@ namespace SnapSaves.Controllers
                     Console.WriteLine($"[Binary File Upload] Base64 Content: {base64}");
                 }
             }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SetTemplateAnonymousAccess(int templateId, bool allowAnonymousAccess)
+        {
+            var template = await _context.Templates.FindAsync(templateId);
+            if (template == null)
+                return NotFound();
+
+            template.AllowAnonymousAccess = allowAnonymousAccess;
+            _context.Templates.Update(template);
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Index));
         }
     }
 

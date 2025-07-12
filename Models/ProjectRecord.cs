@@ -10,8 +10,6 @@ namespace SnapSaves.Models
         [Required]
         [MaxLength(255)]
         public string MongoId { get; set; } = string.Empty;
-
-        [Required]
         public string? UserId { get; set; } = string.Empty;
 
         public int? CourseId { get; set; }
