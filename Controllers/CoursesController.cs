@@ -99,7 +99,7 @@ namespace SnapSaves.Controllers
 
             // Order by most recently updated
             projects = projects.OrderByDescending(p => p.LastModified).ToList();
-
+            ViewData["CourseId"] = id;
             return PartialView("_CourseProjects", projects);
         }
 

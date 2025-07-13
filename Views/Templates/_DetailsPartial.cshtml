@@ -14,6 +14,7 @@
                     <a asp-controller="SnapCode"
                        asp-action="Index"
                        asp-route-projectId="@project.Id"
+                       asp-route-courseId="@Model.CourseId"
                        asp-route-userId="@User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value">
                         @project.Name
                     </a>

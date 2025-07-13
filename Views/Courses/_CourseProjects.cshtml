@@ -1,5 +1,9 @@
 ﻿@model IEnumerable<SnapSaves.Models.Project>
 
+@{
+    var courseId = ViewData["CourseId"] as int?;
+}
+
 @if (!Model.Any())
 {
     <p>No projects found for this course.</p>
@@ -13,7 +17,7 @@ else
             var userId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
 
             <div class="col">
-                <a href="@Url.Action("Index", "SnapCode", new { projectId = project.Id, userId = userId })"
+                <a href="@Url.Action("Index", "SnapCode", new { projectId = project.Id, userId = userId, courseId = courseId })"
                    class="text-decoration-none text-dark">
                     <div class="card h-100 shadow-sm project-card" style="cursor:pointer;">
                         <div class="card-body">
