@@ -58,6 +58,10 @@
                             <button class="btn btn-success me-2" id="saveProjectBtn" onclick="saveProject()">Save</button>
                             <button class="btn btn-outline-secondary me-2" id="createShareLinkBtn" onclick="createShareLink()">Create Share Link</button>
                             <button class="btn btn-outline-secondary me-2" id="viewShareLinkBtn" onclick="viewShareLink()">View Share Link</button>
+                            <button class="btn btn-outline-secondary" id="saveCopyBtn"
+                                    onclick="saveACopy('@(ViewData["CourseId"] ?? "")')">
+                                Save a Copy
+                            </button>
                         </div>
                     }
                 </div>

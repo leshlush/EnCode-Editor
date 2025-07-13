@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using SnapSaves.Data;
 using SnapSaves.Models;
+using SnapSaves.Helpers;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -9,11 +10,13 @@ public class ProjectsApiController : ControllerBase
 {
     private readonly MongoDbContext _dbContext;
     private readonly AppIdentityDbContext _identityDbContext;
+    private readonly ProjectHelper _projectHelper;
 
-    public ProjectsApiController(MongoDbContext dbContext, AppIdentityDbContext identityDbContext)
+    public ProjectsApiController(MongoDbContext dbContext, AppIdentityDbContext identityDbContext, ProjectHelper projectHelper  )
     {
         _dbContext = dbContext;
         _identityDbContext = identityDbContext;
+        _projectHelper = projectHelper;
     }
 
     [HttpPost("save")]
@@ -114,10 +117,48 @@ public class ProjectsApiController : ControllerBase
         return Ok(new { url });
     }
 
+    [HttpPost("save-a-copy")]
+    public async Task<IActionResult> SaveACopy([FromBody] SaveCopyRequest request)
+    {
+        // Validate user
+        var currentUserId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
+        if (string.IsNullOrEmpty(currentUserId) || request.UserId != currentUserId)
+            return Forbid("You do not have permission to copy this project.");
+
+        // Call ProjectHelper to copy the project
+        var (success, errorMessage, newProject) = await _projectHelper.CopyProjectAsync(request.ProjectId, request.UserId, request.CourseId);
+
+        if (!success || newProject == null)
+            return BadRequest(errorMessage ?? "Failed to copy project.");
+
+        // Build the fully qualified URL to open the new project in SnapCode
+        var url = Url.Action(
+            "Index",
+            "SnapCode",
+            new { projectId = newProject.Id, userId = request.UserId, courseId = request.CourseId },
+            protocol: Request.Scheme,
+            host: Request.Host.ToString()
+);
+
+        // Return a message and the URL
+        return Ok(new
+        {
+            message = "A copy of your project has been saved.",
+            url
+        });
+    }
+
     // DTO for request
     public class CreateShareLinkRequest
     {
         public string UserId { get; set; } = string.Empty;
         public string ProjectId { get; set; } = string.Empty;
+    }
+
+    public class SaveCopyRequest
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string ProjectId { get; set; } = string.Empty;
+        public int? CourseId { get; set; }
     }
 }
