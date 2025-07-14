@@ -3,6 +3,7 @@
     ViewData["Title"] = "CheerpJ Viewer";
     var projectId = ViewData["ProjectId"] as string ?? Model?.Id;
     var userId = ViewData["UserId"] as string;
+    var courseId = ViewData["CourseId"] as int?;
     var instructionsId = ViewData["InstructionsId"] as string ?? Model?.InstructionsId;
     var instructionsUrl = ViewData["InstructionsUrl"] as string;
     var projectName = ViewData["ProjectName"] as string ?? Model?.Name ?? "Project";

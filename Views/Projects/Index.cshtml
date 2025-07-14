@@ -1,4 +1,4 @@
-﻿@model List<SnapSaves.Models.Project>
+﻿@model List<SnapSaves.Models.ViewModels.ProjectListItemViewModel>
 
 <h1>Your Projects</h1>
 
@@ -9,11 +9,11 @@
         {
             <li>
                 <h3>
-                    <a asp-controller="SnapCode" asp-action="Index" asp-route-projectId="@project.Id" asp-route-userId="@User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value">
+                    <a asp-controller="SnapCode" asp-action="Index" asp-route-projectId="@project.ProjectId" asp-route-courseId="@project.CourseId" asp-route-userId="@User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value">
                         @project.Name
                     </a>
                 </h3>
-                <form asp-controller="Projects" asp-action="Delete" asp-route-id="@project.Id" method="post" style="display:inline;">
+                <form asp-controller="Projects" asp-action="Delete" asp-route-id="@project.ProjectId" method="post" style="display:inline;">
                     @Html.AntiForgeryToken()
                     <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this project?');">Delete</button>
                 </form>

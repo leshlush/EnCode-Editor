@@ -30,7 +30,7 @@ namespace SnapSaves.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(string projectId, string userId)
+        public async Task<IActionResult> Index(string projectId, string userId, string? courseId)
         {
             // Load the project from MongoDB
             var project = await _mongoDbContext.Projects.Find(p => p.Id == projectId).FirstOrDefaultAsync();
@@ -58,6 +58,7 @@ namespace SnapSaves.Controllers
                 ViewData["ProjectId"] = projectId;
                 ViewData["UserId"] = userId;
                 ViewData["ProjectName"] = project.Name;
+                ViewData["CourseId"] = courseId;
                 return View("ProjectWithInstructions", project);
             }
             else
@@ -67,6 +68,7 @@ namespace SnapSaves.Controllers
                 ViewData["ProjectId"] = projectId;
                 ViewData["UserId"] = userId;
                 ViewData["ProjectName"] = project.Name;
+                ViewData["CourseId"] = courseId;
                 return View("Index", project);
             }
         }

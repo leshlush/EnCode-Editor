@@ -5,6 +5,7 @@ using MongoDB.Driver;
 using SnapSaves.Data;
 using SnapSaves.Helpers;
 using SnapSaves.Models;
+using SnapSaves.Models.ViewModels;
 using Microsoft.EntityFrameworkCore;
 
 namespace SnapSaves.Controllers
@@ -21,7 +22,7 @@ namespace SnapSaves.Controllers
             _identityDbContext = identityDbContext;
             _projectHelper = projectHelper;
         }
-
+         
         [HttpGet]
         public async Task<IActionResult> Index()
         {
@@ -31,30 +32,34 @@ namespace SnapSaves.Controllers
 
                 if (!string.IsNullOrEmpty(userId))
                 {
-                    // Validate that userId is a valid ObjectId
-                    if (!ObjectId.TryParse(userId, out _))
-                    {
-                        Console.WriteLine($"Invalid MongoUserId: {userId}");
-                        return BadRequest("Invalid MongoUserId format.");
-                    }
-
-                    // Fetch user projects
-                    var userProjects = await _dbContext.Projects
-                        .Find(p => p.UserId == userId)
+                    // 1. Fetch ProjectRecords from MySQL
+                    var projectRecords = await _identityDbContext.ProjectRecords
+                        .Where(pr => pr.UserId == userId)
                         .ToListAsync();
 
-                    // Fetch template projects
-                    var templateProjects = await _dbContext.TemplateProjects
-                        .Find(_ => true) // Fetch all templates
+                    var mongoIds = projectRecords.Select(pr => pr.MongoId).ToList();
+
+                    // 2. Fetch Projects from MongoDB
+                    var projects = await _dbContext.Projects
+                        .Find(p => mongoIds.Contains(p.Id))
                         .ToListAsync();
 
-                    // Pass both user projects and templates to the view
-                    ViewData["Templates"] = templateProjects;
-                    return View(userProjects);
+                    // 3. Join in memory
+                    var projectList = (from pr in projectRecords
+                                       join p in projects on pr.MongoId equals p.Id into gj
+                                       from p in gj.DefaultIfEmpty()
+                                       select new ProjectListItemViewModel
+                                       {
+                                           ProjectId = pr.MongoId,
+                                           Name = p?.Name ?? "(Unknown)",
+                                           CourseId = pr.CourseId
+                                       }).ToList();
+
+                    return View(projectList);
                 }
             }
 
-            return View(new List<Project>());
+            return View(new List<ProjectListItemViewModel>());
         }
 
         [Authorize]
