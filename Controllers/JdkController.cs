@@ -67,8 +67,9 @@ namespace SnapSaves.Controllers
                 return View("JdkError", "Project not found or you do not have access to it.");
 
             var currentUserId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
+            // In JdkController, ReadOnly action:
             if (!string.IsNullOrEmpty(currentUserId) && project.UserId == currentUserId)
-                return await Index(projectId, currentUserId, project.Name);
+                return RedirectToAction("Index", new { projectId = projectId, userId = currentUserId, projectName = project.Name });
 
             PrepareProjectForView(project, projectId, project.Name, isReadOnly: true);
             return View("Index");

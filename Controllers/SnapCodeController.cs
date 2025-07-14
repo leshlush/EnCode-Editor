@@ -95,6 +95,13 @@ namespace SnapSaves.Controllers
                 project.Instructions = instructions;
             }
 
+            var currentUserId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
+            if (!string.IsNullOrEmpty(currentUserId) && project.UserId == currentUserId)
+            {
+                // Redirect to Index so the route and view context are correct
+                return RedirectToAction("Index", new { projectId = projectId, userId = currentUserId });
+            }
+
             ViewData["ProjectId"] = projectId;
             ViewData["UserId"] = project.UserId;
             ViewData["ProjectName"] = project.Name;
