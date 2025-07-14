@@ -250,6 +250,22 @@ namespace SnapSaves.Helpers
                 CreatedAt = newProject.CreatedAt
             };
             _identityDbContext.ProjectRecords.Add(projectRecord);
+
+            // 7. Copy TemplateProject associations (if any)
+            var originalTemplateProjects = _identityDbContext.TemplateProjects
+                .Where(tp => tp.ProjectMongoId == projectId)
+                .ToList();
+
+            foreach (var origTp in originalTemplateProjects)
+            {
+                var newTp = new TemplateProject
+                {
+                    TemplateId = origTp.TemplateId,
+                    ProjectMongoId = newProjectId
+                };
+                _identityDbContext.TemplateProjects.Add(newTp);
+            }
+
             await _identityDbContext.SaveChangesAsync();
 
             return (true, "", newProject);
