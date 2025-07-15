@@ -376,3 +376,39 @@ function copyAnonymousShareLinkFromModal() {
     }
 }
 
+async function saveProject() {
+    if (typeof isReadOnly !== "undefined" && isReadOnly) {
+        alert("This project is read-only. Saving is disabled.");
+        return;
+    }
+    const projectId = '@projectId';
+    const projectName = '@projectName';
+
+    const project = await buildProjectJsonFromIndexedDB(projectId, projectName, userId);
+
+    console.log('Sending project to server:', project);
+
+    const response = await fetch('/api/ProjectsApi/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(project)
+    });
+
+    if (response.ok) {
+        console.log('Project saved successfully!');
+        
+        // Check if this is a silent save for share link creation
+        const isSilentSave = window.savingForShareLink === true;
+
+        if (!isSilentSave) {
+            alert('Project saved successfully!');
+        } else {
+            console.log('Skipping alert because this is a silent save');
+        }
+    } else {
+        const errorText = await response.text();
+        console.error('Failed to save project. Server response:', errorText);
+        alert('Failed to save project.');
+    }
+}
+
