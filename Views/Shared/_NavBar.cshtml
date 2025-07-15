@@ -3,6 +3,10 @@
     var showInstructionsButtons = ViewData["ShowInstructionsButtons"] as bool? ?? false;
     var isSnapCode = ViewContext.RouteData.Values["controller"]?.ToString() == "SnapCode";
     var isIndexAction = ViewContext.RouteData.Values["action"]?.ToString() == "Index";
+    var isReadOnlyAction = ViewContext.RouteData.Values["action"]?.ToString() == "ReadOnly";
+    var shareToken = ViewData["ShareToken"] as string;
+    var isAnonymousUser = User.Identity?.IsAuthenticated != true;
+    var isAnonymousProject = isAnonymousUser && !string.IsNullOrEmpty(shareToken);
 }
 
 @inject Microsoft.AspNetCore.Identity.UserManager<SnapSaves.Auth.AppUser> UserManager
@@ -22,7 +26,7 @@
         </button>
         <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
             <ul class="navbar-nav flex-grow-1">
-                @if (User.Identity.IsAuthenticated)
+                @if (User.Identity?.IsAuthenticated == true)
                 {
                     <li class="nav-item">
                         <a class="nav-link text-dark" asp-controller="Projects" asp-action="Index">Projects</a>
@@ -51,23 +55,70 @@
                             <button class="btn btn-outline-primary" onclick="setView('jdk')">Editor Only</button>
                         }
                     </div>
-                    @if(isSnapCode && isIndexAction)
+                    @if (isSnapCode && (isIndexAction || isReadOnlyAction))
                     {
                         <div style="width:2rem;"></div> 
                         <div class="btn-group" role="group" aria-label="Action Buttons">
-                            <button class="btn btn-success me-2" id="saveProjectBtn" onclick="saveProject()">Save</button>
-                            <button class="btn btn-outline-secondary me-2" id="shareLinkBtn" onclick="showShareLinkModal()">Share Link</button>
-                            <button class="btn btn-outline-secondary" id="saveCopyBtn"
-                                    onclick="saveACopy('@(ViewData["CourseId"] ?? "")')">
-                                Save a Copy
-                            </button>
+                            @if (isAnonymousProject)
+                            {
+                                <!-- Anonymous user viewing shared project -->
+                                <button class="btn btn-outline-secondary me-2" id="createAnonymousShareBtn" onclick="createAnonymousShareLink()">
+                                    <i class="fas fa-link me-1"></i>Get Share Link
+                                </button>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown">
+                                        <i class="fas fa-user-plus me-1"></i>Save Permanently
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" asp-controller="Auth" asp-action="Register">Create Account</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Auth" asp-action="Login">Login</a></li>
+                                    </ul>
+                                </div>
+                            }
+                            else if (isAnonymousUser && isReadOnlyAction)
+                            {
+                                <!-- Anonymous user viewing read-only project (no share token) -->
+                                <button class="btn btn-outline-secondary me-2" id="createAnonymousShareBtn" onclick="createAnonymousShareLink()">
+                                    <i class="fas fa-link me-1"></i>Get Share Link
+                                </button>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown">
+                                        <i class="fas fa-user-plus me-1"></i>Save Permanently
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" asp-controller="Auth" asp-action="Register">Create Account</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Auth" asp-action="Login">Login</a></li>
+                                    </ul>
+                                </div>
+                            }
+                            else if (User.Identity?.IsAuthenticated == true)
+                            {
+                                <!-- Logged-in user -->
+                                <button class="btn btn-success me-2" id="saveProjectBtn" onclick="saveProject()">Save</button>
+                                <button class="btn btn-outline-secondary me-2" id="shareLinkBtn" onclick="showShareLinkModal()">Share Link</button>
+                                <button class="btn btn-outline-secondary" id="saveCopyBtn"
+                                        onclick="saveACopy('@(ViewData["CourseId"] ?? "")')">
+                                    Save a Copy
+                                </button>
+                            }
                         </div>
+                        
+                        @* Anonymous user notification *@
+                        @if (isAnonymousProject)
+                        {
+                            <div class="ms-3">
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    <span id="anonymous-expiry-notice">Anonymous session - <span id="days-remaining"></span> days left</span>
+                                </small>
+                            </div>
+                        }
                     }
                 </div>
             }
 
             <ul class="navbar-nav">
-                @if (User.Identity.IsAuthenticated)
+                @if (User.Identity?.IsAuthenticated == true)
                 {
                     <li class="nav-item">
                       <span class="nav-link">Hello, @role</span>
@@ -91,3 +142,81 @@
         </div>
     </div>
 </nav>
+
+@* Include FontAwesome for icons *@
+@if (!ViewData.ContainsKey("FontAwesome"))
+{
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+     ViewData["FontAwesome"] = true; 
+}
+
+@* Anonymous Share Link Modal *@
+<div class="modal fade" id="anonymousShareModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Your Project Share Link</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-1"></i>
+                    This link will allow you to access your project for <strong>30 days</strong>. 
+                    Create an account to save your work permanently!
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Share Link:</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="anonymousShareUrl" readonly>
+                        <button class="btn btn-outline-secondary" onclick="copyAnonymousShareLinkFromModal()">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                    </div>
+                </div>
+                <div class="text-muted">
+                    <small>
+                        <i class="fas fa-calendar-alt me-1"></i>
+                        Expires: <span id="anonymousShareExpiry"></span>
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a class="btn btn-primary" asp-controller="Auth" asp-action="Register">Create Account</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Script to handle anonymous project expiry display *@
+@if (isAnonymousProject)
+{
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get share token from ViewData
+            var shareToken = '@shareToken';
+            
+            if (shareToken && window.anonymousStorage) {
+                // Try to find the template ID and get expiry info
+                var projects = window.anonymousStorage.getAnonymousProjects();
+                var foundProject = null;
+                
+                // Search through stored projects to find one with matching share token
+                for (var templateId in projects) {
+                    if (projects[templateId].shareToken === shareToken) {
+                        foundProject = projects[templateId];
+                        break;
+                    }
+                }
+                
+                if (foundProject) {
+                    var daysLeft = Math.ceil((new Date(foundProject.expiresAt) - new Date()) / (1000 * 60 * 60 * 24));
+                    var daysElement = document.getElementById('days-remaining');
+                    if (daysElement) {
+                        daysElement.textContent = daysLeft;
+                    }
+                }
+            }
+        });
+    </script>
+}

@@ -33,7 +33,7 @@
 <script src="https://cjrtnc.leaningtech.com/20250604_2499/loader.js"></script>
 <script src="/Jdk/cjdom-17.js"></script>
 <script>
-	const isReadOnly = @isReadOnly.ToString().ToLower();
+    const isReadOnly = @(isReadOnly ? "true" : "false");
     const userId = '@userId';
 
     // --- Utility: Convert Uint8Array to base64 in chunks ---
@@ -169,7 +169,7 @@
         const project = {
             Id: projectId,
             Name: projectName,
-            UserId: userId,
+            UserId: (userId && userId.trim() !== '') ? userId : null, // Convert empty string to null
             Files: files // Flat array, no nesting
         };
         console.log('Project JSON to be sent:', project);
@@ -198,6 +198,12 @@
 
         console.log('Sending project to server:', project);
 
+        // Add debugging to see what's happening with the flag
+        console.log('window.parent:', window.parent);
+        console.log('window.top:', window.top);
+        console.log('window.parent.savingForShareLink:', window.parent ? window.parent.savingForShareLink : 'undefined');
+        console.log('window.top.savingForShareLink:', window.top ? window.top.savingForShareLink : 'undefined');
+
         const response = await fetch('/api/ProjectsApi/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -206,7 +212,44 @@
 
         if (response.ok) {
             console.log('Project saved successfully!');
-            alert('Project saved successfully!');
+            
+            // Simplified flag checking - just check if the flag exists and is true
+            var isSilentSave = false;
+            
+            try {
+                // Check parent window (remove the !== window check)
+                if (window.parent && window.parent.savingForShareLink === true) {
+                    isSilentSave = true;
+                    console.log('Silent save detected via window.parent');
+                }
+            } catch (e) {
+                console.log('Could not access window.parent.savingForShareLink:', e);
+            }
+            
+            try {
+                // Check top window (remove the !== window check)
+                if (window.top && window.top.savingForShareLink === true) {
+                    isSilentSave = true;
+                    console.log('Silent save detected via window.top');
+                }
+            } catch (e) {
+                console.log('Could not access window.top.savingForShareLink:', e);
+            }
+            
+            // Also check if we can access it directly on window (in case iframe context is different)
+            if (window.savingForShareLink === true) {
+                isSilentSave = true;
+                console.log('Silent save detected via window.savingForShareLink');
+            }
+            
+            console.log('isSilentSave:', isSilentSave);
+            
+            // Only show alert if this is NOT a silent save for share link creation
+            if (!isSilentSave) {
+                alert('Project saved successfully!');
+            } else {
+                console.log('Skipping alert because this is a silent save');
+            }
         } else {
             const errorText = await response.text();
             console.error('Failed to save project. Server response:', errorText);

@@ -58,8 +58,20 @@ namespace SnapSaves.Controllers
             {
                 var shareLink = await _identityDbContext.ProjectShareLinks
                     .FirstOrDefaultAsync(l => l.Token == shareToken && l.ProjectMongoId == projectId && l.IsActive);
+                
                 if (shareLink == null)
                     return View("JdkError", "Invalid or expired share link.");
+                    
+                // Check if anonymous share link is expired
+                if (shareLink.IsAnonymous && shareLink.IsExpired)
+                    return View("JdkError", "This anonymous share link has expired after 30 days.");
+                    
+                // Update last accessed time for anonymous shares
+                if (shareLink.IsAnonymous)
+                {
+                    shareLink.LastAccessedAt = DateTime.UtcNow;
+                    await _identityDbContext.SaveChangesAsync();
+                }
             }
 
             var project = await GetProjectAsync(projectId);
@@ -67,11 +79,18 @@ namespace SnapSaves.Controllers
                 return View("JdkError", "Project not found or you do not have access to it.");
 
             var currentUserId = User.Claims.FirstOrDefault(c => c.Type == "MongoUserId")?.Value;
-            // In JdkController, ReadOnly action:
+            
             if (!string.IsNullOrEmpty(currentUserId) && project.UserId == currentUserId)
                 return RedirectToAction("Index", new { projectId = projectId, userId = currentUserId, projectName = project.Name });
 
             PrepareProjectForView(project, projectId, project.Name, isReadOnly: true);
+            
+            // Pass share token to view for anonymous users
+            if (!string.IsNullOrEmpty(shareToken))
+            {
+                ViewData["ShareToken"] = shareToken;
+            }
+            
             return View("Index");
         }
 

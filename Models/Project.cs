@@ -18,7 +18,7 @@ namespace SnapSaves.Models
 
         [BsonElement("userId")]
         [BsonRepresentation(BsonType.ObjectId)]
-        public string UserId { get; set; }
+        public string? UserId { get; set; }
 
         [BsonElement("createdAt")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
