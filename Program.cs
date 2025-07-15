@@ -9,6 +9,9 @@ using SnapSaves.Models;
 using Microsoft.AspNetCore.DataProtection;
 using AspNetCore.DataProtection.Aws.S3;
 using Amazon;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.OAuth.Claims;
+
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -44,6 +47,38 @@ builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<AppIdentityDbContext>()
 .AddDefaultTokenProviders();
 
+// Add Google OAuth authentication
+builder.Services.AddAuthentication()
+    .AddGoogle(options =>
+    {
+        options.ClientId = builder.Configuration["Authentication:Google:ClientId"] 
+            ?? throw new InvalidOperationException("Google ClientId not configured");
+        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]
+            ?? throw new InvalidOperationException("Google ClientSecret not configured");
+        
+        // Ensure this matches your Google Console redirect URI
+        options.CallbackPath = "/signin-google";
+        
+        // Request additional scopes for user information
+        options.Scope.Add("profile");
+        options.Scope.Add("email");
+        
+        // Save tokens for potential future API calls
+        options.SaveTokens = true;
+        
+        // Map Google claims to Identity claims
+        options.ClaimActions.MapJsonKey("given_name", "given_name");
+        options.ClaimActions.MapJsonKey("family_name", "family_name");
+        
+        // Add error handling
+        options.Events.OnRemoteFailure = context =>
+        {
+            context.Response.Redirect("/Auth/Login?error=" + context.Failure?.Message);
+            context.HandleResponse();
+            return Task.CompletedTask;
+        };
+    });
+
 // Configure MongoDB settings
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDbSettings"));
@@ -64,6 +99,22 @@ builder.Services.AddDataProtection()
 
 
 var app = builder.Build();
+
+// Add this temporarily to verify configuration
+if (app.Environment.IsDevelopment())
+{
+    var clientId = builder.Configuration["Authentication:Google:ClientId"];
+    var clientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+    
+    app.Logger.LogInformation("Google ClientId configured: {HasClientId}", !string.IsNullOrEmpty(clientId));
+    app.Logger.LogInformation("Google ClientSecret configured: {HasClientSecret}", !string.IsNullOrEmpty(clientSecret));
+    
+    // Don't log the actual values in production!
+    if (!string.IsNullOrEmpty(clientId))
+    {
+        app.Logger.LogInformation("ClientId starts with: {ClientIdPrefix}", clientId.Substring(0, Math.Min(10, clientId.Length)));
+    }
+}
 
 // Configure Middleware Pipeline
 if (!app.Environment.IsDevelopment())
