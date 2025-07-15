@@ -67,7 +67,9 @@ namespace SnapSaves.Helpers
                 organization = new Organization
                 {
                     Name = "Default Organization",
-                    Description = "This is the default organization."
+                    Description = "This is the default organization.",
+                    Type = OrganizationType.Default, // Set the type for default organization
+                    CreatedAt = DateTime.UtcNow
                 };
 
                 _context.Organizations.Add(organization);

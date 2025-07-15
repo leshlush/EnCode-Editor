@@ -38,15 +38,76 @@ namespace SnapSaves.Controllers
         [HttpGet]
         public IActionResult Register(string? returnUrl = null)
         {
-            // Use the same GoogleLogin flow for registration
-            return GoogleLogin(returnUrl);
+            // Show traditional registration form
+            ViewData["ReturnUrl"] = returnUrl;
+            return View(new RegisterViewModel());
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Register(RegisterViewModel model, string? returnUrl = null)
+        {
+            ViewData["ReturnUrl"] = returnUrl;
+            returnUrl ??= Url.Content("~/");
+
+            if (ModelState.IsValid)
+            {
+                // Create user with traditional registration
+                var newUser = await CreateUserFromRegistrationAsync(model.Email, model.FirstName, model.LastName, model.Password);
+                
+                if (newUser != null)
+                {
+                    await _signInManager.SignInAsync(newUser, isPersistent: false);
+                    _logger.LogInformation("Successfully created and signed in new user {Email}", model.Email);
+                    return LocalRedirect(returnUrl);
+                }
+
+                ModelState.AddModelError(string.Empty, "Failed to create user account");
+            }
+
+            return View(model);
         }
 
         [HttpGet]
         public IActionResult Login(string? returnUrl = null)
         {
             ViewData["ReturnUrl"] = returnUrl;
-            return View();
+            return View(new LoginViewModel());
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null)
+        {
+            ViewData["ReturnUrl"] = returnUrl;
+            returnUrl ??= Url.Content("~/");
+
+            if (ModelState.IsValid)
+            {
+                var result = await _signInManager.PasswordSignInAsync(
+                    model.Email, 
+                    model.Password, 
+                    model.RememberMe, 
+                    lockoutOnFailure: false);
+
+                if (result.Succeeded)
+                {
+                    _logger.LogInformation("User logged in with email/password");
+                    return LocalRedirect(returnUrl);
+                }
+
+                if (result.IsLockedOut)
+                {
+                    _logger.LogWarning("User account locked out");
+                    ModelState.AddModelError(string.Empty, "Account locked out");
+                }
+                else
+                {
+                    ModelState.AddModelError(string.Empty, "Invalid login attempt");
+                }
+            }
+
+            return View(model);
         }
 
         [HttpPost]
@@ -144,6 +205,117 @@ namespace SnapSaves.Controllers
             }
         }
 
+        private async Task<AppUser?> CreateUserFromRegistrationAsync(string email, string firstName, string lastName, string password)
+        {
+            // Use MySQL execution strategy to handle transactions with retry logic
+            var strategy = _context.Database.CreateExecutionStrategy();
+            
+            return await strategy.ExecuteAsync(async () =>
+            {
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                
+                try
+                {
+                    // Step 1: Create the user in MongoDB
+                    var mongoUser = new User
+                    {
+                        Username = email,
+                        Email = email,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    await _mongoDb.Users.InsertOneAsync(mongoUser);
+
+                    // Step 2: Create a single-user organization
+                    var organizationName = $"SingleUser-{email}";
+                    var organization = new Organization
+                    {
+                        Name = organizationName,
+                        Description = $"Personal organization for {firstName} {lastName}",
+                        ToolConsumerInstanceGuid = Guid.NewGuid().ToString(),
+                        Type = OrganizationType.SingleUser,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    _context.Organizations.Add(organization);
+                    await _context.SaveChangesAsync();
+
+                    // Step 3: Create the user in MySQL
+                    var appUser = new AppUser
+                    {
+                        UserName = email,
+                        Email = email,
+                        FirstName = firstName,
+                        LastName = lastName,
+                        MongoUserId = mongoUser.Id,
+                        CreatedAt = DateTime.UtcNow,
+                        OrganizationId = organization.Id,
+                        EmailConfirmed = true
+                    };
+
+                    var result = await _userManager.CreateAsync(appUser, password);
+
+                    if (!result.Succeeded)
+                    {
+                        // Rollback MongoDB user
+                        await _mongoDb.Users.DeleteOneAsync(u => u.Id == mongoUser.Id);
+                        _logger.LogError("Failed to create user: {Errors}", string.Join(", ", result.Errors.Select(e => e.Description)));
+                        throw new InvalidOperationException($"Failed to create user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                    }
+
+                    // Step 4: Create a default course for the organization
+                    var defaultCourse = new Course
+                    {
+                        Name = "My Projects",
+                        Description = $"Default course for {firstName} {lastName}'s projects",
+                        OrganizationId = organization.Id
+                    };
+
+                    _context.Courses.Add(defaultCourse);
+                    await _context.SaveChangesAsync();
+
+                    // Step 5: Enroll the user in the default course
+                    _context.UserCourses.Add(new UserCourse
+                    {
+                        UserId = appUser.Id,
+                        CourseId = defaultCourse.Id
+                    });
+
+                    // Step 6: Assign the user to the "Student" role
+                    var roleResult = await _userManager.AddToRoleAsync(appUser, "Student");
+                    if (!roleResult.Succeeded)
+                    {
+                        _logger.LogError("Failed to assign role: {Errors}", string.Join(", ", roleResult.Errors.Select(e => e.Description)));
+                    }
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    _logger.LogInformation("Successfully created user {Email} with organization {OrganizationName} and default course {CourseName}", 
+                        email, organizationName, defaultCourse.Name);
+                    
+                    return appUser;
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    _logger.LogError(ex, "Error creating user from registration for {Email}", email);
+                    
+                    // Cleanup MongoDB user if it was created
+                    try
+                    {
+                        await _mongoDb.Users.DeleteOneAsync(u => u.Username == email);
+                    }
+                    catch (Exception cleanupEx)
+                    {
+                        _logger.LogError(cleanupEx, "Failed to cleanup MongoDB user during rollback");
+                    }
+                    
+                    throw;
+                }
+            });
+        }
+
         private async Task<AppUser?> CreateUserFromGoogleAsync(string email, string firstName, string lastName, ExternalLoginInfo info)
         {
             // Use MySQL execution strategy to handle transactions with retry logic
@@ -171,7 +343,9 @@ namespace SnapSaves.Controllers
                     {
                         Name = organizationName,
                         Description = $"Personal organization for {firstName} {lastName}",
-                        ToolConsumerInstanceGuid = Guid.NewGuid().ToString() // Generate a unique GUID for single users
+                        ToolConsumerInstanceGuid = Guid.NewGuid().ToString(),
+                        Type = OrganizationType.SingleUser,
+                        CreatedAt = DateTime.UtcNow
                     };
 
                     _context.Organizations.Add(organization);
@@ -187,7 +361,7 @@ namespace SnapSaves.Controllers
                         MongoUserId = mongoUser.Id,
                         CreatedAt = DateTime.UtcNow,
                         OrganizationId = organization.Id,
-                        EmailConfirmed = true // Google emails are pre-verified
+                        EmailConfirmed = true
                     };
 
                     var result = await _userManager.CreateAsync(appUser);
@@ -223,15 +397,13 @@ namespace SnapSaves.Controllers
                     if (!addLoginResult.Succeeded)
                     {
                         _logger.LogError("Failed to add external login: {Errors}", string.Join(", ", addLoginResult.Errors.Select(e => e.Description)));
-                        // Don't fail the whole process for this - user can still log in
                     }
 
-                    // Step 7: Assign the user to the "Student" role (default for single users)
+                    // Step 7: Assign the user to the "Student" role
                     var roleResult = await _userManager.AddToRoleAsync(appUser, "Student");
                     if (!roleResult.Succeeded)
                     {
                         _logger.LogError("Failed to assign role: {Errors}", string.Join(", ", roleResult.Errors.Select(e => e.Description)));
-                        // Don't fail the whole process for this
                     }
 
                     await _context.SaveChangesAsync();
@@ -257,7 +429,7 @@ namespace SnapSaves.Controllers
                         _logger.LogError(cleanupEx, "Failed to cleanup MongoDB user during rollback");
                     }
                     
-                    throw; // Re-throw to let ExecutionStrategy handle retries if needed
+                    throw;
                 }
             });
         }

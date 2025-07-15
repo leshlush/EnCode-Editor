@@ -99,6 +99,26 @@ namespace SnapSaves.Data
             });
 
             // Configure Organization relationships
+            builder.Entity<Organization>(entity =>
+            {
+                entity.Property(o => o.Type)
+                    .HasDefaultValue(OrganizationType.Default)
+                    .HasConversion<int>(); // Store enum as int in database
+                
+                entity.Property(o => o.CreatedAt)
+                    .HasDefaultValue(DateTime.UtcNow);
+
+                entity.HasMany(o => o.Courses)
+                    .WithOne(c => c.Organization)
+                    .HasForeignKey(c => c.OrganizationId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasMany(o => o.Users)
+                    .WithOne(u => u.Organization)
+                    .HasForeignKey(u => u.OrganizationId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
             builder.Entity<Organization>()
                 .HasMany(o => o.Courses)
                 .WithOne(c => c.Organization)

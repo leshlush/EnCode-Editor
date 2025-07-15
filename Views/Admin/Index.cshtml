@@ -13,6 +13,11 @@
         </button>
     </li>
     <li class="nav-item" role="presentation">
+        <button class="nav-link" id="organizations-tab" data-bs-toggle="tab" data-bs-target="#organizations" type="button" role="tab" aria-controls="organizations" aria-selected="false">
+            Organizations
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
         <button class="nav-link" id="upload-template-tab" data-bs-toggle="tab" data-bs-target="#upload-template" type="button" role="tab" aria-controls="upload-template" aria-selected="false">
             Upload New Template
         </button>
@@ -46,6 +51,94 @@
             }
         </ul>
     </div>
+
+    <div class="tab-pane fade" id="organizations" role="tabpanel" aria-labelledby="organizations-tab">
+        <h2>Organizations</h2>
+        <div class="row">
+            <div class="col-12">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                                <th>Users</th>
+                                <th>Courses</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var org in Model.Organizations.OrderBy(o => o.Type).ThenByDescending(o => o.CreatedAt))
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@org.Name</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge @org.TypeBadgeClass">@org.TypeDisplayName</span>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">@org.Description</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-secondary">@org.UserCount users</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-secondary">@org.CourseCount courses</span>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">@org.CreatedAt.ToString("MMM dd, yyyy")</small>
+                                    </td>
+                                    <td>
+                                        <a asp-controller="Organizations" asp-action="Details" asp-route-id="@org.Id" class="btn btn-sm btn-outline-primary">View</a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">@Model.Organizations.Count(o => o.Type == SnapSaves.Models.OrganizationType.Default)</h5>
+                        <p class="card-text">Default</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">@Model.Organizations.Count(o => o.Type == SnapSaves.Models.OrganizationType.LtiIntegration)</h5>
+                        <p class="card-text">LTI Integration</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">@Model.Organizations.Count(o => o.Type == SnapSaves.Models.OrganizationType.SingleUser)</h5>
+                        <p class="card-text">Individual Users</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">@Model.Organizations.Count(o => o.Type == SnapSaves.Models.OrganizationType.AdminCreated)</h5>
+                        <p class="card-text">Admin Created</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="tab-pane fade" id="upload-template" role="tabpanel" aria-labelledby="upload-template-tab">
         <h3>Upload a New Universal Template</h3>
         <form asp-controller="Admin" asp-action="UploadUniversalTemplate" method="post" enctype="multipart/form-data">
@@ -103,6 +196,31 @@
     </div>
 </div>
 
+<!-- Add CSS for badge colors -->
+<style>
+    .badge-primary {
+        background-color: #007bff;
+    }
+
+    .badge-success {
+        background-color: #28a745;
+    }
+
+    .badge-info {
+        background-color: #17a2b8;
+    }
+
+    .badge-warning {
+        background-color: #ffc107;
+        color: #212529;
+    }
+
+    .badge-secondary {
+        background-color: #6c757d;
+    }
+</style>
+
+<!-- Add JavaScript -->
 <script>
     function toggleInstructionsUpload() {
         var check = document.getElementById('hasInstructions');
@@ -110,7 +228,7 @@
         upload.style.display = check.checked ? 'block' : 'none';
     }
 
-        function showUpdateInstructionsModal(templateId) {
+    function showUpdateInstructionsModal(templateId) {
         document.getElementById('updateTemplateId').value = templateId;
         var modal = new bootstrap.Modal(document.getElementById('updateInstructionsModal'));
         modal.show();

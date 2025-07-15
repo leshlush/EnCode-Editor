@@ -161,7 +161,9 @@ namespace SnapSaves.Controllers
             {
                 Name = name,
                 Description = description,
-                ToolConsumerInstanceGuid = toolConsumerInstanceGuid
+                ToolConsumerInstanceGuid = toolConsumerInstanceGuid,
+                Type = OrganizationType.LtiIntegration, // Set the type for LTI organizations
+                CreatedAt = DateTime.UtcNow
             };
 
             _context.Organizations.Add(organization);

@@ -260,11 +260,27 @@ namespace SnapSaves.Controllers
                 .Include(rp => rp.Permission)
                 .ToListAsync();
 
-            var organizations = await _context.Organizations.ToListAsync();
+            // Get organizations with counts, sorted by type and creation date
+            var organizations = await _context.Organizations
+                .Include(o => o.Users)
+                .Include(o => o.Courses)
+                .OrderBy(o => o.Type)
+                .ThenByDescending(o => o.CreatedAt)
+                .Select(o => new OrganizationViewModel
+                {
+                    Id = o.Id,
+                    Name = o.Name,
+                    Description = o.Description,
+                    Type = o.Type,
+                    CreatedAt = o.CreatedAt,
+                    UserCount = o.Users.Count,
+                    CourseCount = o.Courses.Count
+                })
+                .ToListAsync();
 
             var rolePermissionsViewModel = roles.Select(role => new RolePermissionsViewModel
             {
-                RoleName = role.Name,
+                RoleName = role.Name ?? "",
                 Permissions = rolePermissions
                     .Where(rp => rp.RoleId == role.Id)
                     .Select(rp => rp.Permission.Name)
@@ -321,11 +337,38 @@ namespace SnapSaves.Controllers
         }
     }
 
+    public class OrganizationViewModel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public OrganizationType Type { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public int UserCount { get; set; }
+        public int CourseCount { get; set; }
+        public string TypeDisplayName => Type switch
+        {
+            OrganizationType.Default => "Default",
+            OrganizationType.LtiIntegration => "LTI Integration",
+            OrganizationType.SingleUser => "Individual User",
+            OrganizationType.AdminCreated => "Admin Created",
+            _ => "Unknown"
+        };
+        public string TypeBadgeClass => Type switch
+        {
+            OrganizationType.Default => "badge-primary",
+            OrganizationType.LtiIntegration => "badge-success",
+            OrganizationType.SingleUser => "badge-info",
+            OrganizationType.AdminCreated => "badge-warning",
+            _ => "badge-secondary"
+        };
+    }
+
     public class AdminViewModel
     {
-        public List<RolePermissionsViewModel> Roles { get; set; }
-        public List<Organization> Organizations { get; set; }
-        public List<Template> UniversalTemplates { get; set; }
+        public List<RolePermissionsViewModel> Roles { get; set; } = new();
+        public List<OrganizationViewModel> Organizations { get; set; } = new();
+        public List<Template> UniversalTemplates { get; set; } = new();
     }
 
     public class RolePermissionsViewModel
