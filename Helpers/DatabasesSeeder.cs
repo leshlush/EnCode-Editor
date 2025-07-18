@@ -190,9 +190,8 @@ namespace SnapSaves.Helpers
 
         private async Task SeedLearningPathsAsync()
         {
-            if (await _context.LearningPaths.AnyAsync())
+            if (!await _context.LearningPaths.AnyAsync())
             {
-                // Create a new LearningPath
                 var learningPath = new LearningPath
                 {
                     Name = "Sample Learning Path",
@@ -202,43 +201,37 @@ namespace SnapSaves.Helpers
                 _context.LearningPaths.Add(learningPath);
                 await _context.SaveChangesAsync();
 
-                // Fetch only the first two UniversalTemplates
-                var universalTemplates = await _context.Templates
-                    .Where(t => t.IsUniversal == true)
-                    .Take(2) // Limit to the first two templates
-                    .ToListAsync();
-
-                if (universalTemplates.Any())
+                // Create units with position ranges
+                var units = new List<Unit>
                 {
-                    // Create LearningItems and associate them with the LearningPath
-                    for (int i = 0; i < universalTemplates.Count; i++)
+                    new Unit { Name = "Unit 1", StartPosition = 0, EndPosition = 4, LearningPathId = learningPath.Id },
+                    new Unit { Name = "Unit 2", StartPosition = 5, EndPosition = 9, LearningPathId = learningPath.Id }
+                };
+
+                _context.AddRange(units);
+                await _context.SaveChangesAsync();
+
+                // Create LearningItems and associate them with the LearningPath
+                for (int i = 0; i < 10; i++)
+                {
+                    var learningItem = new LearningItem
                     {
-                        var template = universalTemplates[i];
+                        Name = $"Learning Item {i + 1}",
+                        ItemType = LearningItemType.Template,
+                        Position = i
+                    };
 
-                        // Create a new LearningItem
-                        var learningItem = new LearningItem
-                        {
-                            Name = template.Name,
-                            ItemType = LearningItemType.Template,
-                            TemplateId = template.Id,
-                            Position = i
-                        };
+                    _context.LearningItems.Add(learningItem);
+                    await _context.SaveChangesAsync();
 
-                        _context.LearningItems.Add(learningItem);
-                        await _context.SaveChangesAsync();
+                    var learningPathItem = new LearningPathItem
+                    {
+                        LearningPathId = learningPath.Id,
+                        LearningItemId = learningItem.Id
+                    };
 
-                        // Create a new LearningPathItem to link the LearningPath and LearningItem
-                        var learningPathItem = new LearningPathItem
-                        {
-                            LearningPathId = learningPath.Id,
-                            LearningItemId = learningItem.Id
-                        };
-
-                        _context.LearningPathItems.Add(learningPathItem);
-                    }
-
+                    _context.LearningPathItems.Add(learningPathItem);
                 }
-
 
                 await _context.SaveChangesAsync();
             }

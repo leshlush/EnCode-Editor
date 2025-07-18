@@ -26,6 +26,7 @@ namespace SnapSaves.Data
         public DbSet<LearningPath> LearningPaths { get; set; }
         public DbSet<LearningItem> LearningItems { get; set; }
         public DbSet<LearningPathItem> LearningPathItems { get; set; }
+        public DbSet<Unit> Units { get; set; } // Add DbSet for Units
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -72,6 +73,7 @@ namespace SnapSaves.Data
             builder.Entity<LearningPath>().ToTable("learningpaths");
             builder.Entity<LearningItem>().ToTable("learningitems");
             builder.Entity<LearningPathItem>().ToTable("learningpathitems");
+            builder.Entity<Unit>().ToTable("units"); // Configure Unit table
 
 
             builder.Entity<ProjectShareLink>(entity =>
@@ -189,20 +191,51 @@ namespace SnapSaves.Data
                 .WithMany()
                 .HasForeignKey(lu => lu.AppUserId)
                 .IsRequired(false);
-
+            
             // Configure LearningPath
             builder.Entity<LearningPath>(entity =>
             {
                 entity.ToTable("learningpaths");
                 entity.HasKey(lp => lp.Id);
-                entity.Property(lp => lp.Name).IsRequired();
-                entity.Property(lp => lp.Description).IsRequired();
 
+                entity.Property(lp => lp.Name)
+                    .IsRequired();
+
+                entity.Property(lp => lp.Description)
+                    .IsRequired();
+
+                // Configure relationship with LearningPathItems
                 entity.HasMany(lp => lp.LearningPathItems)
                     .WithOne(lpi => lpi.LearningPath)
                     .HasForeignKey(lpi => lpi.LearningPathId)
-                    .OnDelete(DeleteBehavior.Cascade)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Configure relationship with Units
+                entity.HasMany(lp => lp.Units)
+                    .WithOne(u => u.LearningPath)
+                    .HasForeignKey(u => u.LearningPathId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Configure Unit
+            builder.Entity<Unit>(entity =>
+            {
+                entity.ToTable("units");
+                entity.HasKey(u => u.Id);
+
+                entity.Property(u => u.Name)
                     .IsRequired();
+
+                entity.Property(u => u.StartPosition)
+                    .IsRequired();
+
+                entity.Property(u => u.EndPosition)
+                    .IsRequired();
+
+                entity.HasOne(u => u.LearningPath)
+                    .WithMany(lp => lp.Units)
+                    .HasForeignKey(u => u.LearningPathId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // Configure LearningItem
@@ -211,20 +244,23 @@ namespace SnapSaves.Data
                 entity.ToTable("learningitems");
                 entity.HasKey(li => li.Id);
 
-             
-                // Add Index property for ordering
+                entity.Property(li => li.Name)
+                    .IsRequired();
+
+                entity.Property(li => li.ItemType)
+                    .IsRequired();
+
                 entity.Property(li => li.Position)
                     .IsRequired()
                     .HasDefaultValue(0);
 
-                // Configure optional Template relationship
                 entity.HasOne(li => li.Template)
                     .WithMany()
                     .HasForeignKey(li => li.TemplateId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // Configure LearningPathItem (Join Table)
+            // Configure LearningPathItem
             builder.Entity<LearningPathItem>(entity =>
             {
                 entity.ToTable("learningpathitems");
@@ -240,6 +276,8 @@ namespace SnapSaves.Data
                     .HasForeignKey(lpi => lpi.LearningItemId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
+
+            
         }
     }
 }

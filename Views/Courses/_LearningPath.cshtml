@@ -19,7 +19,23 @@
         {
             var path = Model.ElementAt(i);
             <div class="tab-pane fade @(i == 0 ? "show active" : "")" id="learningPath-@path.Id" role="tabpanel" aria-labelledby="learningPath-@path.Id-tab">
-                @await Html.PartialAsync("_LearningPath", path)
+                <div>
+                    <h4>@path.Name</h4>
+                    <p>@path.Description</p>
+
+                    @foreach (var unit in path.Units.OrderBy(u => u.StartPosition))
+                    {
+                        <h5>@unit.Name</h5>
+                        <ul>
+                            @foreach (var item in path.LearningPathItems
+                                .Where(lpi => lpi.LearningItem.Position >= unit.StartPosition && lpi.LearningItem.Position <= unit.EndPosition)
+                                .OrderBy(lpi => lpi.LearningItem.Position))
+                            {
+                                <li>@item.LearningItem.Name</li>
+                            }
+                        </ul>
+                    }
+                </div>
             </div>
         }
     </div>
