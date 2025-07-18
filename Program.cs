@@ -155,7 +155,7 @@ using (var scope = app.Services.CreateScope())
     var databaseSeeder = services.GetRequiredService<DatabaseSeeder>();
 
     // Seed the database
-     //await databaseSeeder.SeedAsync();
+     await databaseSeeder.SeedAsync();
 }
 
 

@@ -12,24 +12,18 @@ namespace SnapSaves.Helpers
         private readonly AppIdentityDbContext _context;
         private readonly UserManager<AppUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
-        private readonly UserHelper _userHelper;
         private readonly TemplateHelper _templateHelper;
-        private readonly ProjectHelper _projectHelper;
 
         public DatabaseSeeder(
             AppIdentityDbContext context,
             UserManager<AppUser> userManager,
             RoleManager<IdentityRole> roleManager,
-            UserHelper userHelper,
-            TemplateHelper templateHelper,
-            ProjectHelper projectHelper)
+            TemplateHelper templateHelper)
         {
             _context = context;
             _userManager = userManager;
             _roleManager = roleManager;
-            _userHelper = userHelper;
             _templateHelper = templateHelper;
-            _projectHelper = projectHelper;
         }
 
         public async Task SeedAsync()
@@ -37,26 +31,27 @@ namespace SnapSaves.Helpers
             // Apply migrations
             await _context.Database.MigrateAsync();
 
-            // Seed the default organization
+            // Seed default organization
             var defaultOrganization = await SeedDefaultOrganizationAsync();
 
             // Seed roles and permissions
-            await SeedRolesAsync();
+            await SeedRolesAndPermissionsAsync();
 
             // Seed admin user
-            await SeedAdminAsync(defaultOrganization);
+            var adminUser = await SeedAdminUserAsync(defaultOrganization);
 
             // Seed courses
             var courses = await SeedCoursesAsync(defaultOrganization);
 
-            // Seed teacher
-            await SeedTeacherAsync(defaultOrganization, courses);
-
-            // Seed students
-           await SeedStudentsAsync(defaultOrganization, courses);
-
             // Seed templates
-            await SeedTemplatesAsync(courses);
+            await SeedTemplatesAsync(courses, adminUser);
+
+            // Seed learning paths and items
+            await SeedLearningPathsAsync();
+
+            // Seed teacher and students
+            await SeedTeacherAsync(defaultOrganization, courses);
+            await SeedStudentsAsync(defaultOrganization, courses);
         }
 
         private async Task<Organization> SeedDefaultOrganizationAsync()
@@ -68,7 +63,7 @@ namespace SnapSaves.Helpers
                 {
                     Name = "Default Organization",
                     Description = "This is the default organization.",
-                    Type = OrganizationType.Default, // Set the type for default organization
+                    Type = OrganizationType.Default,
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -78,92 +73,42 @@ namespace SnapSaves.Helpers
 
             return organization;
         }
-        private async Task SeedRolesAsync()
+
+        private async Task SeedRolesAndPermissionsAsync()
         {
-            if (!await _roleManager.RoleExistsAsync("Teacher"))
+            var roles = new[] { "Admin", "Teacher", "Student" };
+            foreach (var role in roles)
             {
-                await _roleManager.CreateAsync(new IdentityRole("Teacher"));
-            }
-            if (!await _roleManager.RoleExistsAsync("Student"))
-            {
-                await _roleManager.CreateAsync(new IdentityRole("Student"));
-            }
-            if (!await _roleManager.RoleExistsAsync("Admin"))
-            {
-                await _roleManager.CreateAsync(new IdentityRole("Admin"));
-            }
-            if (!await _roleManager.RoleExistsAsync("Manager"))
-            {
-                await _roleManager.CreateAsync(new IdentityRole("Manager"));
+                if (!await _roleManager.RoleExistsAsync(role))
+                {
+                    await _roleManager.CreateAsync(new IdentityRole(role));
+                }
             }
 
-            // Seed permissions
-            var permissions = new List<Permission>
-    {
-        new Permission { Name = "ViewCourses" },
-        new Permission { Name = "EditCourses" },
-        new Permission { Name = "ViewStudents" },
-        new Permission { Name = "ViewTeachers" },
-        new Permission { Name = "ViewStudentProjects" }
-    };
+            var permissions = new[]
+            {
+                "ViewCourses", "EditCourses", "ViewStudents", "ViewTeachers", "ViewStudentProjects"
+            };
 
             foreach (var permission in permissions)
             {
-                if (!_context.Permissions.Any(p => p.Name == permission.Name))
+                if (!_context.Permissions.Any(p => p.Name == permission))
                 {
-                    _context.Permissions.Add(permission);
-                }
-            }
-            await _context.SaveChangesAsync();
-
-            // Assign permissions to roles
-            var teacherRole = await _roleManager.FindByNameAsync("Teacher");
-            var studentRole = await _roleManager.FindByNameAsync("Student");
-            var managerRole = await _roleManager.FindByNameAsync("Manager"); 
-
-            var teacherPermissions = new[] { "ViewCourses", "EditCourses", "ViewStudents", "ViewStudentProjects" };
-            var studentPermissions = new[] { "ViewCourses" };
-            var managerPermissions = new[] { "ViewCourses", "EditCourses", "ViewStudents", "ViewTeachers", "ViewStudentProjects" };
-
-            foreach (var permissionName in teacherPermissions)
-            {
-                var permission = _context.Permissions.FirstOrDefault(p => p.Name == permissionName);
-                if (permission != null && !_context.RolePermissions.Any(rp => rp.RoleId == teacherRole.Id && rp.PermissionId == permission.Id))
-                {
-                    _context.RolePermissions.Add(new RolePermission
-                    {
-                        RoleId = teacherRole.Id,
-                        PermissionId = permission.Id
-                    });
-                }
-            }
-
-            foreach (var permissionName in studentPermissions)
-            {
-                var permission = _context.Permissions.FirstOrDefault(p => p.Name == permissionName);
-                if (permission != null && !_context.RolePermissions.Any(rp => rp.RoleId == studentRole.Id && rp.PermissionId == permission.Id))
-                {
-                    _context.RolePermissions.Add(new RolePermission
-                    {
-                        RoleId = studentRole.Id,
-                        PermissionId = permission.Id
-                    });
+                    _context.Permissions.Add(new Permission { Name = permission });
                 }
             }
 
             await _context.SaveChangesAsync();
         }
 
-        private async Task SeedAdminAsync(Organization defaultOrganization)
+        private async Task<AppUser> SeedAdminUserAsync(Organization organization)
         {
             var adminEmail = "admin@encodecreate.com";
             var adminPassword = "Admin123!";
 
-            // Check if the admin user already exists
             var adminUser = await _userManager.FindByEmailAsync(adminEmail);
             if (adminUser == null)
             {
-                // Create the admin user
                 adminUser = new AppUser
                 {
                     UserName = adminEmail,
@@ -172,32 +117,29 @@ namespace SnapSaves.Helpers
                     LastName = "User",
                     MongoUserId = ObjectId.GenerateNewId().ToString(),
                     CreatedAt = DateTime.UtcNow,
-                    OrganizationId = defaultOrganization.Id
+                    OrganizationId = organization.Id
                 };
 
                 var result = await _userManager.CreateAsync(adminUser, adminPassword);
                 if (!result.Succeeded)
                 {
-                    Console.WriteLine($"Failed to create admin user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
-                    return;
+                    throw new Exception($"Failed to create admin user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
                 }
 
-                // Assign the "Admin" role to the user
-                var roleResult = await _userManager.AddToRoleAsync(adminUser, "Admin");
-                if (!roleResult.Succeeded)
-                {
-                    Console.WriteLine($"Failed to assign Admin role: {string.Join(", ", roleResult.Errors.Select(e => e.Description))}");
-                }
+                await _userManager.AddToRoleAsync(adminUser, "Admin");
             }
+
+            return adminUser;
         }
-        private async Task<List<Course>> SeedCoursesAsync(Organization defaultOrganization)
+
+        private async Task<List<Course>> SeedCoursesAsync(Organization organization)
         {
             var courses = new List<Course>
-    {
-        new Course { Name = "Course 1", Description = "Description for Course 1", OrganizationId = defaultOrganization.Id },
-        new Course { Name = "Course 2", Description = "Description for Course 2", OrganizationId = defaultOrganization.Id },
-        new Course { Name = "Course 3", Description = "Description for Course 3", OrganizationId = defaultOrganization.Id }
-    };
+            {
+                new Course { Name = "Course 1", Description = "Description for Course 1", OrganizationId = organization.Id },
+                new Course { Name = "Course 2", Description = "Description for Course 2", OrganizationId = organization.Id },
+                new Course { Name = "Course 3", Description = "Description for Course 3", OrganizationId = organization.Id }
+            };
 
             foreach (var course in courses)
             {
@@ -206,217 +148,179 @@ namespace SnapSaves.Helpers
                     _context.Courses.Add(course);
                 }
             }
-            await _context.SaveChangesAsync();
 
+            await _context.SaveChangesAsync();
             return await _context.Courses.ToListAsync();
         }
 
-        private async Task SeedTeacherAsync(Organization defaultOrganization, List<Course> courses)
+        private async Task SeedTemplatesAsync(List<Course> courses, AppUser adminUser)
         {
-            var teacherEmail = "teacher2@encodecreate.com";
-            var teacherPassword = "Terrap1n";
-
-            // Pass the OrganizationId to the UserHelper
-            var (teacherSuccess, teacherError) = await _userHelper.CreateUserAsync(
-                teacherEmail,
-                teacherPassword,
-                "Teacher",
-                "EncodeCreate",
-                "Teacher",
-                defaultOrganization.Id // Pass the OrganizationId here
-            );
-
-            if (!teacherSuccess)
+            var templates = new List<(string Name, string Description)>
             {
-                Console.WriteLine($"Failed to create teacher: {teacherError}");
-                return;
+                ("Template 1", "Description for Template 1"),
+                ("Template 2", "Description for Template 2"),
+                ("Template 3", "Description for Template 3")
+            };
+
+            foreach (var (name, description) in templates)
+            {
+                if (!_context.Templates.Any(t => t.Name == name))
+                {
+                    var project = new Project
+                    {
+                        Name = name,
+                        CreatedAt = DateTime.UtcNow,
+                        LastModified = DateTime.UtcNow,
+                        UserId = adminUser.MongoUserId,
+                        Files = new List<ProjectFile>
+                        {
+                            new ProjectFile { Path = "index.html", Content = $"<h1>{name}</h1>", IsDirectory = false },
+                            new ProjectFile { Path = "style.css", Content = "body { font-family: Arial; }", IsDirectory = false }
+                        }
+                    };
+
+                    var (success, errorMessage) = await _templateHelper.CreateNewProjectTemplateAsync(project, courses.First().Id);
+                    if (!success)
+                    {
+                        throw new Exception($"Failed to create template '{name}': {errorMessage}");
+                    }
+                }
             }
+        }
+
+        private async Task SeedLearningPathsAsync()
+        {
+            if (await _context.LearningPaths.AnyAsync())
+            {
+                // Create a new LearningPath
+                var learningPath = new LearningPath
+                {
+                    Name = "Sample Learning Path",
+                    Description = "A sample learning path for demonstration purposes."
+                };
+
+                _context.LearningPaths.Add(learningPath);
+                await _context.SaveChangesAsync();
+
+                // Fetch only the first two UniversalTemplates
+                var universalTemplates = await _context.Templates
+                    .Where(t => t.IsUniversal == true)
+                    .Take(2) // Limit to the first two templates
+                    .ToListAsync();
+
+                if (universalTemplates.Any())
+                {
+                    // Create LearningItems and associate them with the LearningPath
+                    for (int i = 0; i < universalTemplates.Count; i++)
+                    {
+                        var template = universalTemplates[i];
+
+                        // Create a new LearningItem
+                        var learningItem = new LearningItem
+                        {
+                            Name = template.Name,
+                            ItemType = LearningItemType.Template,
+                            TemplateId = template.Id,
+                            Position = i
+                        };
+
+                        _context.LearningItems.Add(learningItem);
+                        await _context.SaveChangesAsync();
+
+                        // Create a new LearningPathItem to link the LearningPath and LearningItem
+                        var learningPathItem = new LearningPathItem
+                        {
+                            LearningPathId = learningPath.Id,
+                            LearningItemId = learningItem.Id
+                        };
+
+                        _context.LearningPathItems.Add(learningPathItem);
+                    }
+
+                }
+
+
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        private async Task SeedTeacherAsync(Organization organization, List<Course> courses)
+        {
+            var teacherEmail = "teacher@encodecreate.com";
+            var teacherPassword = "Teacher123!";
 
             var teacher = await _userManager.FindByEmailAsync(teacherEmail);
             if (teacher == null)
             {
-                Console.WriteLine("Teacher user not found after creation.");
-                return;
+                teacher = new AppUser
+                {
+                    UserName = teacherEmail,
+                    Email = teacherEmail,
+                    FirstName = "Teacher",
+                    LastName = "User",
+                    MongoUserId = ObjectId.GenerateNewId().ToString(),
+                    CreatedAt = DateTime.UtcNow,
+                    OrganizationId = organization.Id
+                };
+
+                var result = await _userManager.CreateAsync(teacher, teacherPassword);
+                if (!result.Succeeded)
+                {
+                    throw new Exception($"Failed to create teacher: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                }
+
+                await _userManager.AddToRoleAsync(teacher, "Teacher");
             }
 
             foreach (var course in courses)
             {
                 if (!_context.UserCourses.Any(uc => uc.UserId == teacher.Id && uc.CourseId == course.Id))
                 {
-                    _context.UserCourses.Add(new UserCourse
-                    {
-                        UserId = teacher.Id,
-                        CourseId = course.Id
-                    });
+                    _context.UserCourses.Add(new UserCourse { UserId = teacher.Id, CourseId = course.Id });
                 }
             }
-
-            // Seed the teacher's project from the AppleCatchers folder
-            await SeedTeacherProjectAsync(teacher);
 
             await _context.SaveChangesAsync();
         }
 
-        private async Task SeedTeacherProjectAsync(AppUser teacher)
+        private async Task SeedStudentsAsync(Organization organization, List<Course> courses)
         {
-            try
-            {
-                // Path to the AppleCatchers folder
-                var directoryPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Assets", "AppleCatchers");
-
-                // Ensure the directory exists
-                if (!Directory.Exists(directoryPath))
-                {
-                    Console.WriteLine($"Directory '{directoryPath}' does not exist. Skipping teacher project seeding.");
-                    return;
-                }
-
-                // Use ProjectHelper to create the project
-                var project = await _projectHelper.CreateProjectFromDirectoryAsync(directoryPath, teacher.MongoUserId);
-
-                Console.WriteLine($"Project '{project.Name}' created for teacher with ID: {teacher.Id}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to seed teacher project: {ex.Message}");
-            }
-        }
-    
-        private async Task SeedStudentsAsync(Organization defaultOrganization, List<Course> courses)
-        {
-            for (int i = 1; i <= 15; i++)
+            for (int i = 1; i <= 10; i++)
             {
                 var studentEmail = $"student{i}@encodecreate.com";
-                var studentPassword = $"Password{i}!";
-
-                // Pass the OrganizationId to the UserHelper
-                var (studentSuccess, studentError) = await _userHelper.CreateUserAsync(
-                    studentEmail,
-                    studentPassword,
-                    $"Student{i}",
-                    "EncodeCreate",
-                    "Student",
-                    defaultOrganization.Id // Pass the OrganizationId here
-                );
-
-                if (!studentSuccess)
-                {
-                    Console.WriteLine($"Failed to create student {i}: {studentError}");
-                    continue;
-                }
+                var studentPassword = $"Student{i}123!";
 
                 var student = await _userManager.FindByEmailAsync(studentEmail);
                 if (student == null)
                 {
-                    Console.WriteLine($"Student {i} not found after creation.");
-                    continue;
+                    student = new AppUser
+                    {
+                        UserName = studentEmail,
+                        Email = studentEmail,
+                        FirstName = $"Student{i}",
+                        LastName = "User",
+                        MongoUserId = ObjectId.GenerateNewId().ToString(),
+                        CreatedAt = DateTime.UtcNow,
+                        OrganizationId = organization.Id
+                    };
+
+                    var result = await _userManager.CreateAsync(student, studentPassword);
+                    if (!result.Succeeded)
+                    {
+                        throw new Exception($"Failed to create student {i}: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                    }
+
+                    await _userManager.AddToRoleAsync(student, "Student");
                 }
 
-                var courseIndex = (i - 1) / 5; // 0 for Course 1, 1 for Course 2, 2 for Course 3
-                var course = courses[courseIndex];
-
+                var course = courses[i % courses.Count];
                 if (!_context.UserCourses.Any(uc => uc.UserId == student.Id && uc.CourseId == course.Id))
                 {
-                    _context.UserCourses.Add(new UserCourse
-                    {
-                        UserId = student.Id,
-                        CourseId = course.Id
-                    });
+                    _context.UserCourses.Add(new UserCourse { UserId = student.Id, CourseId = course.Id });
                 }
             }
+
             await _context.SaveChangesAsync();
         }
-
-        private async Task SeedTemplatesAsync(List<Course> courses)
-        {
-            if (courses == null || courses.Count == 0)
-            {
-                Console.WriteLine("No courses found. Skipping template seeding.");
-                return;
-            }
-
-            // 1. Get an admin user to use as the owner of the seed projects
-            var adminUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == "admin@encodecreate.com");
-            if (adminUser == null)
-            {
-                Console.WriteLine("Admin user not found. Cannot seed templates.");
-                return;
-            }
-
-            var templates = new List<(string Name, string Description)>
-    {
-        ("Template 1", "Description for Template 1"),
-        ("Template 2", "Description for Template 2"),
-        ("Template 3", "Description for Template 3"),
-        ("Template 4", "Description for Template 4"),
-        ("Template 5", "Description for Template 5"),
-        ("Template 6", "Description for Template 6"),
-        ("Template 7", "Description for Template 7"),
-        ("Template 8", "Description for Template 8"),
-        ("Template 9", "Description for Template 9")
-    };
-
-            for (int i = 0; i < templates.Count; i++)
-            {
-                var course = courses[i / 3]; // Distribute templates across 3 courses
-
-                // Check if a template with the same name already exists for this course
-                var existingTemplate = await _context.Templates
-                    .Where(t => t.Name == templates[i].Name)
-                    .Join(_context.CourseTemplates,
-                        t => t.Id,
-                        ct => ct.TemplateId,
-                        (t, ct) => new { t, ct })
-                    .Where(x => x.ct.CourseId == course.Id)
-                    .Select(x => x.t)
-                    .FirstOrDefaultAsync();
-
-                if (existingTemplate != null)
-                {
-                    Console.WriteLine($"Template '{templates[i].Name}' already exists for course '{course.Name}'. Skipping.");
-                    continue;
-                }
-
-                // 2. Set the UserId to the admin's MongoUserId
-                var project = new Project
-                {
-                    Name = templates[i].Name,
-                    CreatedAt = DateTime.UtcNow,
-                    LastModified = DateTime.UtcNow,
-                    UserId = adminUser.MongoUserId, // <-- This is the fix!
-                    Files = new List<ProjectFile>
-            {
-                new ProjectFile
-                {
-                    Path = "index.html",
-                    Content = $"<html><head><title>{templates[i].Name}</title></head><body><h1>{templates[i].Name}</h1></body></html>",
-                    IsDirectory = false,
-                    IsBinary = false
-                },
-                new ProjectFile
-                {
-                    Path = "style.css",
-                    Content = "body { font-family: Arial, sans-serif; }",
-                    IsDirectory = false,
-                    IsBinary = false
-                }
-            }
-                };
-
-                // Use the helper to create a template from the project
-                var (success, errorMessage) = await _templateHelper.CreateNewProjectTemplateAsync(project, course.Id);
-                if (!success)
-                {
-                    Console.WriteLine($"Failed to create template '{templates[i].Name}' for course '{course.Name}': {errorMessage}");
-                }
-                else
-                {
-                    Console.WriteLine($"Template '{templates[i].Name}' created for course '{course.Name}'.");
-                }
-            }
-        }
-
-
-
     }
 }

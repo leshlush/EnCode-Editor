@@ -1,0 +1,30 @@
+﻿@model IEnumerable<SnapSaves.Models.LearningPath>
+
+@if (Model != null && Model.Any())
+{
+    <ul class="nav nav-tabs" id="learningPathsSubTabs" role="tablist">
+        @for (int i = 0; i < Model.Count(); i++)
+        {
+            var path = Model.ElementAt(i);
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(i == 0 ? "active" : "")" id="learningPath-@path.Id-tab" data-bs-toggle="tab" data-bs-target="#learningPath-@path.Id" type="button" role="tab" aria-controls="learningPath-@path.Id" aria-selected="@(i == 0)">
+                    @path.Name
+                </button>
+            </li>
+        }
+    </ul>
+
+    <div class="tab-content" id="learningPathsSubTabContent">
+        @for (int i = 0; i < Model.Count(); i++)
+        {
+            var path = Model.ElementAt(i);
+            <div class="tab-pane fade @(i == 0 ? "show active" : "")" id="learningPath-@path.Id" role="tabpanel" aria-labelledby="learningPath-@path.Id-tab">
+                @await Html.PartialAsync("_LearningPath", path)
+            </div>
+        }
+    </div>
+}
+else
+{
+    <p>No learning paths available.</p>
+}

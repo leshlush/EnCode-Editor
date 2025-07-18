@@ -23,6 +23,9 @@ namespace SnapSaves.Data
         public DbSet<TemplateProject> TemplateProjects { get; set; }
         public DbSet<ProjectRecord> ProjectRecords { get; set; }
         public DbSet<ProjectShareLink> ProjectShareLinks { get; set; }
+        public DbSet<LearningPath> LearningPaths { get; set; }
+        public DbSet<LearningItem> LearningItems { get; set; }
+        public DbSet<LearningPathItem> LearningPathItems { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -63,6 +66,13 @@ namespace SnapSaves.Data
             builder.Entity<RolePermission>().ToTable("rolepermissions");
             builder.Entity<Instructions>().ToTable("instructions");
             builder.Entity<ProjectRecord>().ToTable("projectrecords");
+
+            builder.Entity<ProjectShareLink>().ToTable("projectsharelinks");
+            builder.Entity<TemplateProject>().ToTable("templateprojects");
+            builder.Entity<LearningPath>().ToTable("learningpaths");
+            builder.Entity<LearningItem>().ToTable("learningitems");
+            builder.Entity<LearningPathItem>().ToTable("learningpathitems");
+
 
             builder.Entity<ProjectShareLink>(entity =>
             {
@@ -180,7 +190,56 @@ namespace SnapSaves.Data
                 .HasForeignKey(lu => lu.AppUserId)
                 .IsRequired(false);
 
-            // Additional configurations for other entities can go here...
+            // Configure LearningPath
+            builder.Entity<LearningPath>(entity =>
+            {
+                entity.ToTable("learningpaths");
+                entity.HasKey(lp => lp.Id);
+                entity.Property(lp => lp.Name).IsRequired();
+                entity.Property(lp => lp.Description).IsRequired();
+
+                entity.HasMany(lp => lp.LearningPathItems)
+                    .WithOne(lpi => lpi.LearningPath)
+                    .HasForeignKey(lpi => lpi.LearningPathId)
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
+            });
+
+            // Configure LearningItem
+            builder.Entity<LearningItem>(entity =>
+            {
+                entity.ToTable("learningitems");
+                entity.HasKey(li => li.Id);
+
+             
+                // Add Index property for ordering
+                entity.Property(li => li.Position)
+                    .IsRequired()
+                    .HasDefaultValue(0);
+
+                // Configure optional Template relationship
+                entity.HasOne(li => li.Template)
+                    .WithMany()
+                    .HasForeignKey(li => li.TemplateId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Configure LearningPathItem (Join Table)
+            builder.Entity<LearningPathItem>(entity =>
+            {
+                entity.ToTable("learningpathitems");
+                entity.HasKey(lpi => new { lpi.LearningPathId, lpi.LearningItemId });
+
+                entity.HasOne(lpi => lpi.LearningPath)
+                    .WithMany(lp => lp.LearningPathItems)
+                    .HasForeignKey(lpi => lpi.LearningPathId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(lpi => lpi.LearningItem)
+                    .WithMany()
+                    .HasForeignKey(lpi => lpi.LearningItemId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
         }
     }
 }

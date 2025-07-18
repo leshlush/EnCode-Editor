@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SnapSaves.Data;
 
@@ -11,9 +12,11 @@ using SnapSaves.Data;
 namespace SnapSaves.Data.Migrations.Identity
 {
     [DbContext(typeof(AppIdentityDbContext))]
-    partial class AppIdentityDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250717194414_FixLearningItemColumns")]
+    partial class FixLearningItemColumns
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -317,15 +320,22 @@ namespace SnapSaves.Data.Migrations.Identity
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<int>("Position")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0);
+                    b.Property<int?>("NextItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PreviousItemId")
+                        .HasColumnType("int");
 
                     b.Property<int?>("TemplateId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("NextItemId")
+                        .IsUnique();
+
+                    b.HasIndex("PreviousItemId")
+                        .IsUnique();
 
                     b.HasIndex("TemplateId");
 
@@ -429,7 +439,7 @@ namespace SnapSaves.Data.Migrations.Identity
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime(6)")
-                        .HasDefaultValue(new DateTime(2025, 7, 18, 0, 42, 16, 223, DateTimeKind.Utc).AddTicks(6537));
+                        .HasDefaultValue(new DateTime(2025, 7, 17, 19, 44, 13, 783, DateTimeKind.Utc).AddTicks(2474));
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -726,10 +736,24 @@ namespace SnapSaves.Data.Migrations.Identity
 
             modelBuilder.Entity("SnapSaves.Models.LearningItem", b =>
                 {
+                    b.HasOne("SnapSaves.Models.LearningItem", "NextItem")
+                        .WithOne()
+                        .HasForeignKey("SnapSaves.Models.LearningItem", "NextItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SnapSaves.Models.LearningItem", "PreviousItem")
+                        .WithOne()
+                        .HasForeignKey("SnapSaves.Models.LearningItem", "PreviousItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("SnapSaves.Models.Template", "Template")
                         .WithMany()
                         .HasForeignKey("TemplateId")
                         .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("NextItem");
+
+                    b.Navigation("PreviousItem");
 
                     b.Navigation("Template");
                 });

@@ -6,6 +6,7 @@ using SnapSaves.Auth;
 using SnapSaves.Data;
 using SnapSaves.Models;
 using MongoDB.Driver;
+using SnapSaves.Helpers;
 
 namespace SnapSaves.Controllers
 {
@@ -62,7 +63,7 @@ namespace SnapSaves.Controllers
 
             // Fetch all universal templates (not tied to the course)
             var universalTemplates = await _context.Templates
-                .Where(t => t.IsUniversal == true) // Fetch only templates marked as universal
+                .Where(t => t.IsUniversal == true)
                 .ToListAsync();
 
             // Ensure IsUniversal is false for templates with null values
@@ -73,6 +74,12 @@ namespace SnapSaves.Controllers
 
             // Add universal templates to the course's UniversalTemplates property
             course.UniversalTemplates = universalTemplates;
+
+            // Use the LearningPathHelper to fetch learning paths
+            var learningPathHelper = new LearningPathHelper(_context);
+            var learningPaths = await learningPathHelper.GetLearningPathsWithItemsAsync();
+
+            ViewData["LearningPaths"] = learningPaths;
 
             return View(course);
         }

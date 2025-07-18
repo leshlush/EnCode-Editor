@@ -33,6 +33,12 @@
             Projects
         </button>
     </li>
+    <!-- Add Learning Paths Tab -->
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="learningPaths-tab" data-bs-toggle="tab" data-bs-target="#learningPaths" type="button" role="tab" aria-controls="learningPaths" aria-selected="false">
+            Learning Paths
+        </button>
+    </li>
 </ul>
 
 <!-- Tab content -->
@@ -75,6 +81,33 @@
     </div>
     <div class="tab-pane fade" id="projects" role="tabpanel" aria-labelledby="projects-tab">
         <div id="courseProjectsContent" class="p-3 text-center text-muted">Loading projects...</div>
+    </div>
+    <!-- Tab content for Learning Paths -->
+    <div class="tab-pane fade" id="learningPaths" role="tabpanel" aria-labelledby="learningPaths-tab">
+        @if (ViewData["LearningPaths"] is List<SnapSaves.Models.LearningPath> learningPaths)
+        {
+            foreach (var path in learningPaths)
+            {
+                <h4>@path.Name</h4>
+                <p>@path.Description</p>
+                <ul>
+                    @foreach (var item in path.LearningPathItems)
+                    {
+                        <li>
+                            <strong>@item.LearningItem.Name</strong>
+                            @if (item.LearningItem.Template != null)
+                            {
+                                <span> - Template: @item.LearningItem.Template.Name</span>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        }
+        else
+        {
+            <p>No learning paths available.</p>
+        }
     </div>
 </div>
 
