@@ -94,7 +94,19 @@
                     @foreach (var item in path.LearningPathItems)
                     {
                         <li>
-                            <strong>@item.LearningItem.Name</strong>
+                            @if (item.LearningItem.TemplateId != null)
+                            {
+                                <a href="#" class="template-link text-decoration-none"
+                                   data-template-id="@item.LearningItem.TemplateId"
+                                   data-course-id="@Model.Id">
+                                    <strong>@item.LearningItem.Name</strong>
+                                </a>
+                            }
+                            else
+                            {
+                                <strong>@item.LearningItem.Name</strong>
+                            }
+
                             @if (item.LearningItem.Template != null)
                             {
                                 <span> - Template: @item.LearningItem.Template.Name</span>
