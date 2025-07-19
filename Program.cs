@@ -154,10 +154,10 @@ using (var scope = app.Services.CreateScope())
     //await projectHelperTest.TestCreateProjectFromDirectoryAsync();
 
     
-    var databaseSeeder = services.GetRequiredService<DatabaseSeeder>();
+   var databaseSeeder = services.GetRequiredService<DatabaseSeeder>();
 
     // Seed the database
-     await databaseSeeder.SeedAsync();
+  //   await databaseSeeder.SeedAsync();
 }
 
 

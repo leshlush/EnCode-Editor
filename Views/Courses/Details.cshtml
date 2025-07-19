@@ -86,35 +86,73 @@
     <div class="tab-pane fade" id="learningPaths" role="tabpanel" aria-labelledby="learningPaths-tab">
         @if (ViewData["LearningPaths"] is List<SnapSaves.Models.LearningPath> learningPaths)
         {
-            foreach (var path in learningPaths)
-            {
-                <h4>@path.Name</h4>
-                <p>@path.Description</p>
-                <ul>
-                    @foreach (var item in path.LearningPathItems)
-                    {
-                        <li>
-                            @if (item.LearningItem.TemplateId != null)
-                            {
-                                <a href="#" class="template-link text-decoration-none"
-                                   data-template-id="@item.LearningItem.TemplateId"
-                                   data-course-id="@Model.Id">
-                                    <strong>@item.LearningItem.Name</strong>
-                                </a>
-                            }
-                            else
-                            {
-                                <strong>@item.LearningItem.Name</strong>
-                            }
+            <!-- Sub-tabs for Learning Paths -->
+            <ul class="nav nav-tabs" id="learningPathsSubTabs" role="tablist">
+                @for (int i = 0; i < learningPaths.Count; i++)
+                {
+                    var path = learningPaths[i];
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link @(i == 0 ? "active" : "")" id="learningPath-@path.Id-tab" data-bs-toggle="tab" data-bs-target="#learningPath-@path.Id" type="button" role="tab" aria-controls="learningPath-@path.Id" aria-selected="@(i == 0)">
+                            @path.Name
+                        </button>
+                    </li>
+                }
+            </ul>
 
-                            @if (item.LearningItem.Template != null)
-                            {
-                                <span> - Template: @item.LearningItem.Template.Name</span>
-                            }
-                        </li>
-                    }
-                </ul>
-            }
+            <!-- Sub-tab content for Learning Paths -->
+            <div class="tab-content" id="learningPathsSubTabContent">
+                @for (int i = 0; i < learningPaths.Count; i++)
+                {
+                    var path = learningPaths[i];
+                    var learningPathId = $"learningPath-{path.Id}"; // Unique ID for each learning path
+                    <div class="tab-pane fade @(i == 0 ? "show active" : "")" id="@learningPathId" role="tabpanel" aria-labelledby="learningPath-@path.Id-tab">
+                        <div>
+                            <h4>@path.Name</h4>
+                            <p>@path.Description</p>
+
+                            <!-- Bootstrap Accordion for Units -->
+                            <div class="accordion" id="accordion-@learningPathId">
+                                @foreach (var unit in path.Units.OrderBy(u => u.StartPosition))
+                                {
+                                    var unitId = $"unit-{unit.Name.Replace(" ", "-")}-{unit.StartPosition}-{learningPathId}";
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="heading-@unitId">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-@unitId" aria-expanded="false" aria-controls="collapse-@unitId">
+                                                @unit.Name
+                                            </button>
+                                        </h2>
+                                        <div id="collapse-@unitId" class="accordion-collapse collapse" aria-labelledby="heading-@unitId" data-bs-parent="#accordion-@learningPathId">
+                                            <div class="accordion-body">
+                                                <ul>
+                                                    @foreach (var item in path.LearningPathItems
+                                                        .Where(lpi => lpi.LearningItem.Position >= unit.StartPosition && lpi.LearningItem.Position <= unit.EndPosition)
+                                                        .OrderBy(lpi => lpi.LearningItem.Position))
+                                                    {
+                                                        <li>
+                                                            @if (item.LearningItem.TemplateId != null)
+                                                            {
+                                                                <a href="#" class="template-link text-decoration-none"
+                                                                   data-template-id="@item.LearningItem.TemplateId"
+                                                                   data-course-id="@Model.Id">
+                                                                    <strong>@item.LearningItem.Name</strong>
+                                                                </a>
+                                                            }
+                                                            else
+                                                            {
+                                                                <strong>@item.LearningItem.Name</strong>
+                                                            }
+                                                        </li>
+                                                    }
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
         }
         else
         {

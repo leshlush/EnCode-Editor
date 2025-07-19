@@ -23,18 +23,44 @@
                     <h4>@path.Name</h4>
                     <p>@path.Description</p>
 
-                    @foreach (var unit in path.Units.OrderBy(u => u.StartPosition))
-                    {
-                        <h5>@unit.Name</h5>
-                        <ul>
-                            @foreach (var item in path.LearningPathItems
-                                .Where(lpi => lpi.LearningItem.Position >= unit.StartPosition && lpi.LearningItem.Position <= unit.EndPosition)
-                                .OrderBy(lpi => lpi.LearningItem.Position))
-                            {
-                                <li>@item.LearningItem.Name</li>
-                            }
-                        </ul>
-                    }
+                    <!-- Bootstrap Accordion for Units -->
+                    <div class="accordion" id="accordion-@path.Id">
+                        @foreach (var unit in path.Units.OrderBy(u => u.StartPosition))
+                        {
+                            var unitId = $"unit-{unit.Name.Replace(" ", "-")}-{unit.StartPosition}";
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="heading-@unitId">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-@unitId" aria-expanded="false" aria-controls="collapse-@unitId">
+                                        @unit.Name
+                                    </button>
+                                </h2>
+                                <div id="collapse-@unitId" class="accordion-collapse collapse" aria-labelledby="heading-@unitId" data-bs-parent="#accordion-@path.Id">
+                                    <div class="accordion-body">
+                                        <ul>
+                                            @foreach (var item in path.LearningPathItems
+                                                .Where(lpi => lpi.LearningItem.Position >= unit.StartPosition && lpi.LearningItem.Position <= unit.EndPosition)
+                                                .OrderBy(lpi => lpi.LearningItem.Position))
+                                            {
+                                                <li>
+                                                    @if (item.LearningItem.TemplateId != null)
+                                                    {
+                                                        <a href="#" class="template-link text-decoration-none"
+                                                           data-template-id="@item.LearningItem.TemplateId">
+                                                            <strong>@item.LearningItem.Name</strong>
+                                                        </a>
+                                                    }
+                                                    else
+                                                    {
+                                                        <strong>@item.LearningItem.Name</strong>
+                                                    }
+                                                </li>
+                                            }
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
                 </div>
             </div>
         }
