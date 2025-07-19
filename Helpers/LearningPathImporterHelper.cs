@@ -87,26 +87,59 @@ namespace SnapSaves.Helpers
                     var project = await _projectHelper.CreateProjectFromDirectoryAsync(filesDir, userId: null);
 
                     Template template;
+                    string? instructionsId = null;
+
                     if (Directory.Exists(instructionsDir))
                     {
-                        // Create a project for the instructions
-                        var instructionsProject = await _projectHelper.CreateProjectFromDirectoryAsync(instructionsDir, userId: null);
+                        Console.WriteLine($"Instructions directory found: {instructionsDir}");
 
-                        // Create a template with instructions
-                        template = await _templateHelper.CreateUniversalTemplateAsync(
-                            project,
-                            description: $"Template for {templateEntry.Name}",
-                            instructionsProject: instructionsProject
-                        );
+                        try
+                        {
+                            // Save the instructions to wwwroot/instructions/{guid}/
+                            var instructionsFolder = Path.Combine("wwwroot", "instructions", Guid.NewGuid().ToString());
+                            Directory.CreateDirectory(instructionsFolder);
+
+                            // Copy all files and subdirectories recursively
+                            CopyDirectoryRecursively(instructionsDir, instructionsFolder);
+
+                            // Save the relative path to content/index.html as the Location in Instructions
+                            var instructions = new Instructions
+                            {
+                                Id = Guid.NewGuid().ToString(),
+                                Type = InstructionsType.Static,
+                                Location = Path.Combine("instructions", Path.GetFileName(instructionsFolder), "index.html"),
+                                Description = $"Instructions for {templateEntry.Name}",
+                                CreatedAt = DateTime.UtcNow
+                            };
+                            _context.Instructions.Add(instructions);
+                            await _context.SaveChangesAsync();
+                            instructionsId = instructions.Id;
+
+                            // Log the instructions creation
+                            Console.WriteLine($"Instructions created with ID: {instructions.Id}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Error processing instructions for template '{templateEntry.Name}': {ex.Message}");
+                            continue;
+                        }
                     }
-                    else
+
+                    // Create the template and link the instructions if present
+                    template = await _templateHelper.CreateUniversalTemplateAsync(
+                        project,
+                        description: $"Template for {templateEntry.Name}"
+                    );
+
+                    if (!string.IsNullOrEmpty(instructionsId))
                     {
-                        // Create a template without instructions
-                        template = await _templateHelper.CreateUniversalTemplateAsync(
-                            project,
-                            description: $"Template for {templateEntry.Name}"
-                        );
+                        template.InstructionsId = instructionsId;
+                        _context.Templates.Update(template);
+                        await _context.SaveChangesAsync();
                     }
+
+                    // Log the template creation
+                    Console.WriteLine($"Template created. Template ID: {template.Id}, Instructions ID: {instructionsId}");
 
                     // Create the LearningItem
                     var learningItem = new LearningItemRequest
@@ -118,6 +151,9 @@ namespace SnapSaves.Helpers
                     };
 
                     await _learningPathHelper.AddLearningItemsAsync(learningPath.Id, new List<LearningItemRequest> { learningItem });
+
+                    // Log the learning item creation
+                    Console.WriteLine($"Learning item created for template '{templateEntry.Name}' with position {templateEntry.Position}");
                 }
             }
         }
@@ -166,6 +202,27 @@ namespace SnapSaves.Helpers
             }
 
             return manifest;
+        }
+
+        // Helper method to copy directories recursively
+        private void CopyDirectoryRecursively(string sourceDir, string destinationDir)
+        {
+            // Create the destination directory if it doesn't exist
+            Directory.CreateDirectory(destinationDir);
+
+            // Copy all files in the current directory
+            foreach (var file in Directory.GetFiles(sourceDir))
+            {
+                var destFile = Path.Combine(destinationDir, Path.GetFileName(file));
+                File.Copy(file, destFile, overwrite: true);
+            }
+
+            // Recursively copy all subdirectories
+            foreach (var subDir in Directory.GetDirectories(sourceDir))
+            {
+                var destSubDir = Path.Combine(destinationDir, Path.GetFileName(subDir));
+                CopyDirectoryRecursively(subDir, destSubDir);
+            }
         }
     }
 
