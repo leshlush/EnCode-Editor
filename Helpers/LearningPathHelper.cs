@@ -13,28 +13,117 @@ namespace SnapSaves.Helpers
             _context = context;
         }
 
-        public async Task<List<LearningPath>> GetLearningPathsWithItemsAsync()
+        // Create a new LearningPath
+        public async Task<LearningPath> CreateLearningPathAsync(string name, string? description)
         {
-            // Fetch all learning paths with their associated items and templates
-            var learningPaths = await _context.LearningPaths
-                .Include(lp => lp.LearningPathItems)
-                .ThenInclude(lpi => lpi.LearningItem)
-                .ThenInclude(li => li.Template) // Include the Template for hydration
-                .ToListAsync();
-
-            // Ensure LearningPathItems and LearningItems are properly loaded
-            foreach (var path in learningPaths)
+            if (string.IsNullOrWhiteSpace(name))
             {
-                foreach (var item in path.LearningPathItems)
-                {
-                    if (item.LearningItem == null)
-                    {
-                        throw new Exception($"LearningItem is null for LearningPathItem with LearningPathId: {item.LearningPathId} and LearningItemId: {item.LearningItemId}");
-                    }
-                }
+                throw new ArgumentException("LearningPath name is required.", nameof(name));
             }
 
-            return learningPaths;
+            var learningPath = new LearningPath
+            {
+                Name = name,
+                Description = description ?? string.Empty
+            };
+
+            _context.LearningPaths.Add(learningPath);
+            await _context.SaveChangesAsync();
+
+            return learningPath;
         }
+
+        // Add LearningItems to a LearningPath
+        public async Task AddLearningItemsAsync(int learningPathId, List<LearningItemRequest> learningItems)
+        {
+            var learningPath = await _context.LearningPaths
+                .Include(lp => lp.LearningPathItems)
+                .FirstOrDefaultAsync(lp => lp.Id == learningPathId);
+
+            if (learningPath == null)
+            {
+                throw new KeyNotFoundException("LearningPath not found.");
+            }
+
+            foreach (var item in learningItems)
+            {
+                var learningItem = new LearningItem
+                {
+                    Name = item.Name,
+                    ItemType = item.ItemType,
+                    TemplateId = item.TemplateId,
+                    Position = item.Position
+                };
+
+                _context.LearningItems.Add(learningItem);
+                await _context.SaveChangesAsync();
+
+                var learningPathItem = new LearningPathItem
+                {
+                    LearningPathId = learningPath.Id,
+                    LearningItemId = learningItem.Id
+                };
+
+                _context.LearningPathItems.Add(learningPathItem);
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        // Add Units to a LearningPath
+        public async Task AddUnitsAsync(int learningPathId, List<UnitRequest> units)
+        {
+            var learningPath = await _context.LearningPaths
+                .Include(lp => lp.Units)
+                .FirstOrDefaultAsync(lp => lp.Id == learningPathId);
+
+            if (learningPath == null)
+            {
+                throw new KeyNotFoundException("LearningPath not found.");
+            }
+
+            foreach (var unit in units)
+            {
+                var newUnit = new Unit
+                {
+                    Name = unit.Name,
+                    StartPosition = unit.StartPosition,
+                    EndPosition = unit.EndPosition,
+                    LearningPathId = learningPath.Id
+                };
+
+                _context.Units.Add(newUnit);
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        // Get LearningPaths with associated items for a specific course
+        public async Task<List<LearningPath>> GetLearningPathsWithItemsAsync()
+        {
+            // Fetch all LearningPaths with their associated LearningPathItems, LearningItems, Templates, and Units
+            return await _context.LearningPaths
+                .Include(lp => lp.LearningPathItems)
+                    .ThenInclude(lpi => lpi.LearningItem)
+                        .ThenInclude(li => li.Template) // Include Template for LearningItems
+                .Include(lp => lp.Units) // Include Units for grouping
+                .ToListAsync();
+        }
+    }
+
+    // Request models
+    public class LearningItemRequest
+    {
+        public string Name { get; set; } = string.Empty;
+        public LearningItemType ItemType { get; set; }
+        public int? TemplateId { get; set; }
+        public int Position { get; set; }
+    }
+
+    public class UnitRequest
+    {
+        public string Name { get; set; } = string.Empty;
+        public int StartPosition { get; set; }
+        public int EndPosition { get; set; }
     }
 }

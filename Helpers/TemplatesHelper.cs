@@ -273,7 +273,7 @@ namespace SnapSaves.Helpers
             }
         }
 
-        public async Task<Template> CreateUniversalTemplateAsync(Project project, string description)
+        public async Task<Template> CreateUniversalTemplateAsync(Project project, string description, Project? instructionsProject = null)
         {
             try
             {
@@ -286,7 +286,8 @@ namespace SnapSaves.Helpers
                     MongoId = project.Id,
                     Name = project.Name,
                     Description = description,
-                    IsUniversal = true // Mark the template as universal
+                    IsUniversal = true, // Mark the template as universal
+                    InstructionsId = instructionsProject?.Id // Link the instructions project if provided
                 };
 
                 _dbContext.Templates.Add(template);

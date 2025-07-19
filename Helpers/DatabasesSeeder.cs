@@ -13,17 +13,20 @@ namespace SnapSaves.Helpers
         private readonly UserManager<AppUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly TemplateHelper _templateHelper;
+        private readonly LearningPathImporterHelper _learningPathImporterHelper;
 
         public DatabaseSeeder(
             AppIdentityDbContext context,
             UserManager<AppUser> userManager,
             RoleManager<IdentityRole> roleManager,
-            TemplateHelper templateHelper)
+            TemplateHelper templateHelper,
+            LearningPathImporterHelper learningPathImporterHelper)
         {
             _context = context;
             _userManager = userManager;
             _roleManager = roleManager;
             _templateHelper = templateHelper;
+            _learningPathImporterHelper = learningPathImporterHelper;
         }
 
         public async Task SeedAsync()
@@ -49,9 +52,29 @@ namespace SnapSaves.Helpers
             // Seed learning paths and items
             await SeedLearningPathsAsync();
 
+            // Import learning paths from the directory
+            await ImportLearningPathsAsync();
+
             // Seed teacher and students
             await SeedTeacherAsync(defaultOrganization, courses);
             await SeedStudentsAsync(defaultOrganization, courses);
+        }
+
+        private async Task ImportLearningPathsAsync()
+        {
+            // Define the root directory for learning paths
+            var rootDirectory = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "LearningPaths");
+
+            // Call the LearningPathImporterHelper to import learning paths
+            try
+            {
+                await _learningPathImporterHelper.ImportLearningPathsAsync(rootDirectory);
+                Console.WriteLine("Learning paths imported successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error importing learning paths: {ex.Message}");
+            }
         }
 
         private async Task<Organization> SeedDefaultOrganizationAsync()

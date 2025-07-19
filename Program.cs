@@ -93,6 +93,8 @@ builder.Services.AddScoped<ProjectHelper>();
 builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<UserHelper>();
 builder.Services.AddScoped<PermissionHelper>();
+builder.Services.AddScoped<LearningPathImporterHelper>(); // Register LearningPathImporterHelper
+builder.Services.AddScoped<LearningPathHelper>();
 builder.Services.AddScoped<IUserClaimsPrincipalFactory<AppUser>, CustomUserClaimsPrincipalFactory>();
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo("/app/dataprotection-keys"));
