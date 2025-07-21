@@ -134,19 +134,19 @@
                                                                 <a href="#" class="template-link text-decoration-none"
                                                                    data-template-id="@item.LearningItem.TemplateId"
                                                                    data-course-id="@Model.Id">
-                                                                    <strong>Template @item.LearningItem.Name</strong>
+                                                                    <strong>@item.LearningItem.Name</strong>
                                                                 </a>
                                                             }
                                                             else if (item.LearningItem.LessonId != null)
                                                             {
                                                                 <a href="javascript:void(0);" class="lesson-link text-decoration-none" 
                                                                    data-lesson-id="@item.LearningItem.LessonId">
-                                                                    <strong>Lesson @item.LearningItem.Name</strong>
+                                                                    <strong>@item.LearningItem.Name</strong>
                                                                 </a>
                                                             }
                                                             else
                                                             {
-                                                                <strong>Unknown @item.LearningItem.Name</strong>
+                                                                <strong>@item.LearningItem.Name</strong>
                                                             }
                                                         </li>
                                                     }
