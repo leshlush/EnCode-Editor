@@ -1,5 +1,0 @@
-{
-	"Class": "BuildFile",
-	"MainClassName": "Main",
-	"IncludeSnapKitRuntime": true
-}
