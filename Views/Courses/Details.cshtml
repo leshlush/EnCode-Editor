@@ -139,7 +139,8 @@
                                                             }
                                                             else if (item.LearningItem.LessonId != null)
                                                             {
-                                                                <a href="@Url.Action("Index", "Lesson", new { lessonId = item.LearningItem.LessonId })" class="lesson-link text-decoration-none">
+                                                                <a href="javascript:void(0);" class="lesson-link text-decoration-none" 
+                                                                   data-lesson-id="@item.LearningItem.LessonId">
                                                                     <strong>Lesson @item.LearningItem.Name</strong>
                                                                 </a>
                                                             }
@@ -192,6 +193,23 @@
             </div>
             <div class="modal-body p-4" id="studentProjectsContent">
                 <!-- AJAX-loaded content goes here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap Modal for Lesson -->
+<div class="modal fade" id="lessonModal" tabindex="-1" aria-labelledby="lessonModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl"> <!-- Use 'modal-xl' for a very large modal -->
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="lessonModalLabel">Lesson</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="lessonModalContent" class="text-center">
+                    <p>Loading lesson...</p>
+                </div>
             </div>
         </div>
     </div>
@@ -252,6 +270,23 @@
                 });
             }).fail(function(xhr) {
                 $('#createProjectResult').html('<div class="alert alert-danger">' + xhr.responseText + '</div>');
+            });
+        });
+
+        $(document).on('click', '.lesson-link', function (e) {
+            e.preventDefault();
+
+            var lessonId = $(this).data('lesson-id'); // Get the lesson ID from the data attribute
+            $('#lessonModalContent').html('<div class="text-center">Loading lesson...</div>'); // Show loading message
+
+            var lessonModal = new bootstrap.Modal(document.getElementById('lessonModal')); // Initialize the modal
+            lessonModal.show(); // Show the modal
+
+            // Make an AJAX request to fetch the lesson content
+            $.get('/Lesson/Index', { lessonId: lessonId }, function (data) {
+                $('#lessonModalContent').html(data); // Load the lesson content into the modal
+            }).fail(function () {
+                $('#lessonModalContent').html('<div class="text-danger">Failed to load lesson. Please try again later.</div>');
             });
         });
     </script>

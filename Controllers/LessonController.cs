@@ -35,7 +35,9 @@ namespace SnapSaves.Controllers
 
             // Pass the lesson path to the view
             ViewData["LessonPath"] = lessonPath;
-            return View();
+
+            // Return a partial view for the modal
+            return PartialView("_LessonContent");
         }
     }
 }
