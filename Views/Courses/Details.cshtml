@@ -107,7 +107,6 @@
                     var learningPathId = $"learningPath-{path.Id}"; // Unique ID for each learning path
                     <div class="tab-pane fade @(i == 0 ? "show active" : "")" id="@learningPathId" role="tabpanel" aria-labelledby="learningPath-@path.Id-tab">
                         <div>
-                            <h4>@path.Name</h4>
                             <p>@path.Description</p>
 
                             <!-- Bootstrap Accordion for Units -->
@@ -123,34 +122,68 @@
                                         </h2>
                                         <div id="collapse-@unitId" class="accordion-collapse collapse" aria-labelledby="heading-@unitId" data-bs-parent="#accordion-@learningPathId">
                                             <div class="accordion-body">
-                                                <ul>
+                                                <div class="container">
                                                     @foreach (var item in path.LearningPathItems
                                                         .Where(lpi => lpi.LearningItem.Position >= unit.StartPosition && lpi.LearningItem.Position <= unit.EndPosition)
                                                         .OrderBy(lpi => lpi.LearningItem.Position))
                                                     {
-                                                        <li>
-                                                            @if (item.LearningItem.TemplateId != null)
-                                                            {
-                                                                <a href="#" class="template-link text-decoration-none"
-                                                                   data-template-id="@item.LearningItem.TemplateId"
-                                                                   data-course-id="@Model.Id">
-                                                                    <strong>@item.LearningItem.Name</strong>
-                                                                </a>
-                                                            }
-                                                            else if (item.LearningItem.LessonId != null)
-                                                            {
-                                                                <a href="javascript:void(0);" class="lesson-link text-decoration-none" 
-                                                                   data-lesson-id="@item.LearningItem.LessonId">
-                                                                    <strong>@item.LearningItem.Name</strong>
-                                                                </a>
-                                                            }
-                                                            else
-                                                            {
-                                                                <strong>@item.LearningItem.Name</strong>
-                                                            }
-                                                        </li>
+                                                        <div class="row align-items-center">
+                                                            <div class="col-md-2">
+                                                                @if (item.LearningItem.TemplateId != null)
+                                                                {
+                                                                    var templateDescription = item.LearningItem.Template?.Description ?? "No description available";
+                                                                    <a href="#" class="template-link text-decoration-none"
+                                                                       data-template-id="@item.LearningItem.TemplateId"
+                                                                       data-course-id="@Model.Id">
+                                                                        @item.LearningItem.Name
+                                                                    </a>
+                                                                }
+                                                                else if (item.LearningItem.LessonId != null)
+                                                                {
+                                                                    var lessonDescription = item.LearningItem.Lesson?.Description ?? "No description available";
+                                                                    <a href="javascript:void(0);" class="lesson-link text-decoration-none"
+                                                                       data-lesson-id="@item.LearningItem.LessonId">
+                                                                        @item.LearningItem.Name
+                                                                    </a>
+                                                                }
+                                                                else
+                                                                {
+                                                                    @item.LearningItem.Name
+                                                                }
+                                                            </div>
+                                                            <div class="col-md-2 text-muted">
+                                                                @if (item.LearningItem.TemplateId != null)
+                                                                {
+                                                                    <span>Project Template</span>
+                                                                }
+                                                                else if (item.LearningItem.LessonId != null)
+                                                                {
+                                                                    <span>Lesson</span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span>Unknown</span>
+                                                                }
+                                                            </div>
+                                                            <div class="col-md-8">
+                                                                @if (item.LearningItem.TemplateId != null)
+                                                                {
+                                                                    var templateDescription = item.LearningItem.Template?.Description ?? "No description available";
+                                                                    <span class="text-muted">@templateDescription</span>
+                                                                }
+                                                                else if (item.LearningItem.LessonId != null)
+                                                                {
+                                                                    var lessonDescription = item.LearningItem.Lesson?.Description ?? "No description available";
+                                                                    <span class="text-muted">@lessonDescription</span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="text-muted">No description available</span>
+                                                                }
+                                                            </div>
+                                                        </div>
                                                     }
-                                                </ul>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
