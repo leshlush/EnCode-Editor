@@ -52,6 +52,7 @@ namespace SnapSaves.Helpers
                     Name = item.Name,
                     ItemType = item.ItemType,
                     TemplateId = item.TemplateId,
+                    LessonId = item.LessonId,
                     Position = item.Position
                 };
 
@@ -101,12 +102,31 @@ namespace SnapSaves.Helpers
         // Get LearningPaths with associated items for a specific course
         public async Task<List<LearningPath>> GetLearningPathsWithItemsAsync()
         {
-            // Fetch all LearningPaths with their associated LearningPathItems, LearningItems, Templates, and Units
             return await _context.LearningPaths
                 .Include(lp => lp.LearningPathItems)
                     .ThenInclude(lpi => lpi.LearningItem)
-                        .ThenInclude(li => li.Template) // Include Template for LearningItems
-                .Include(lp => lp.Units) // Include Units for grouping
+                .Include(lp => lp.Units)
+                .Select(lp => new LearningPath
+                {
+                    Id = lp.Id,
+                    Name = lp.Name,
+                    Description = lp.Description,
+                    Units = lp.Units.OrderBy(u => u.StartPosition).ToList(),
+                    LearningPathItems = lp.LearningPathItems.Select(lpi => new LearningPathItem
+                    {
+                        LearningPathId = lpi.LearningPathId,
+                        LearningItemId = lpi.LearningItemId,
+                        LearningItem = new LearningItem
+                        {
+                            Id = lpi.LearningItem.Id,
+                            Name = lpi.LearningItem.Name,
+                            ItemType = lpi.LearningItem.ItemType,
+                            Position = lpi.LearningItem.Position,
+                            TemplateId = lpi.LearningItem.TemplateId, // Ensure TemplateId is included
+                            LessonId = lpi.LearningItem.LessonId,     // Ensure LessonId is included
+                        }
+                    }).ToList()
+                })
                 .ToListAsync();
         }
     }
@@ -117,6 +137,7 @@ namespace SnapSaves.Helpers
         public string Name { get; set; } = string.Empty;
         public LearningItemType ItemType { get; set; }
         public int? TemplateId { get; set; }
+        public int? LessonId { get; set; }
         public int Position { get; set; }
     }
 

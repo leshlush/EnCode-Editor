@@ -134,12 +134,18 @@
                                                                 <a href="#" class="template-link text-decoration-none"
                                                                    data-template-id="@item.LearningItem.TemplateId"
                                                                    data-course-id="@Model.Id">
-                                                                    <strong>@item.LearningItem.Name</strong>
+                                                                    <strong>Template @item.LearningItem.Name</strong>
+                                                                </a>
+                                                            }
+                                                            else if (item.LearningItem.LessonId != null)
+                                                            {
+                                                                <a href="@Url.Action("Index", "Lesson", new { lessonId = item.LearningItem.LessonId })" class="lesson-link text-decoration-none">
+                                                                    <strong>Lesson @item.LearningItem.Name</strong>
                                                                 </a>
                                                             }
                                                             else
                                                             {
-                                                                <strong>@item.LearningItem.Name</strong>
+                                                                <strong>Unknown @item.LearningItem.Name</strong>
                                                             }
                                                         </li>
                                                     }

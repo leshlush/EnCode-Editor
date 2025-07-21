@@ -313,6 +313,9 @@ namespace SnapSaves.Data.Migrations.Identity
                     b.Property<int>("ItemType")
                         .HasColumnType("int");
 
+                    b.Property<int?>("LessonId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -326,8 +329,6 @@ namespace SnapSaves.Data.Migrations.Identity
                         .HasColumnType("int");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("TemplateId");
 
                     b.ToTable("learningitems", (string)null);
                 });
@@ -366,6 +367,27 @@ namespace SnapSaves.Data.Migrations.Identity
                     b.HasIndex("LearningItemId");
 
                     b.ToTable("learningpathitems", (string)null);
+                });
+
+            modelBuilder.Entity("SnapSaves.Models.Lesson", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("lessons", (string)null);
                 });
 
             modelBuilder.Entity("SnapSaves.Models.LtiUser", b =>
@@ -429,7 +451,7 @@ namespace SnapSaves.Data.Migrations.Identity
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime(6)")
-                        .HasDefaultValue(new DateTime(2025, 7, 18, 13, 52, 24, 360, DateTimeKind.Utc).AddTicks(6673));
+                        .HasDefaultValue(new DateTime(2025, 7, 20, 0, 24, 47, 36, DateTimeKind.Utc).AddTicks(3982));
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -748,16 +770,6 @@ namespace SnapSaves.Data.Migrations.Identity
                         .IsRequired();
 
                     b.Navigation("Course");
-
-                    b.Navigation("Template");
-                });
-
-            modelBuilder.Entity("SnapSaves.Models.LearningItem", b =>
-                {
-                    b.HasOne("SnapSaves.Models.Template", "Template")
-                        .WithMany()
-                        .HasForeignKey("TemplateId")
-                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Template");
                 });

@@ -26,7 +26,8 @@ namespace SnapSaves.Data
         public DbSet<LearningPath> LearningPaths { get; set; }
         public DbSet<LearningItem> LearningItems { get; set; }
         public DbSet<LearningPathItem> LearningPathItems { get; set; }
-        public DbSet<Unit> Units { get; set; } // Add DbSet for Units
+        public DbSet<Unit> Units { get; set; }
+        public DbSet<Lesson> Lessons { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -74,6 +75,7 @@ namespace SnapSaves.Data
             builder.Entity<LearningItem>().ToTable("learningitems");
             builder.Entity<LearningPathItem>().ToTable("learningpathitems");
             builder.Entity<Unit>().ToTable("units"); // Configure Unit table
+            builder.Entity<Lesson>().ToTable("lessons");
 
 
             builder.Entity<ProjectShareLink>(entity =>
@@ -192,6 +194,59 @@ namespace SnapSaves.Data
                 .HasForeignKey(lu => lu.AppUserId)
                 .IsRequired(false);
             
+            // Configure LearningItem
+            builder.Entity<LearningItem>(entity =>
+            {
+                entity.ToTable("learningitems");
+                entity.HasKey(li => li.Id);
+
+                entity.Property(li => li.Name)
+                    .IsRequired();
+
+                entity.Property(li => li.ItemType)
+                    .IsRequired();
+
+                entity.Property(li => li.Position)
+                    .IsRequired()
+                    .HasDefaultValue(0);
+
+                // Configure TemplateId as a foreign key without navigation
+                entity.Property(li => li.TemplateId);
+
+                // Configure LessonId as a foreign key without navigation
+                entity.Property(li => li.LessonId);
+            });
+
+            // Configure Lesson
+            builder.Entity<Lesson>(entity =>
+            {
+                entity.ToTable("lessons");
+                entity.HasKey(l => l.Id);
+
+                entity.Property(l => l.Location)
+                    .IsRequired();
+
+                entity.Property(l => l.Description)
+                    .IsRequired();
+            });
+
+            // Configure LearningPathItem
+            builder.Entity<LearningPathItem>(entity =>
+            {
+                entity.ToTable("learningpathitems");
+                entity.HasKey(lpi => new { lpi.LearningPathId, lpi.LearningItemId });
+
+                entity.HasOne(lpi => lpi.LearningPath)
+                    .WithMany(lp => lp.LearningPathItems)
+                    .HasForeignKey(lpi => lpi.LearningPathId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(lpi => lpi.LearningItem)
+                    .WithMany()
+                    .HasForeignKey(lpi => lpi.LearningItemId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
             // Configure LearningPath
             builder.Entity<LearningPath>(entity =>
             {
@@ -238,46 +293,7 @@ namespace SnapSaves.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // Configure LearningItem
-            builder.Entity<LearningItem>(entity =>
-            {
-                entity.ToTable("learningitems");
-                entity.HasKey(li => li.Id);
-
-                entity.Property(li => li.Name)
-                    .IsRequired();
-
-                entity.Property(li => li.ItemType)
-                    .IsRequired();
-
-                entity.Property(li => li.Position)
-                    .IsRequired()
-                    .HasDefaultValue(0);
-
-                entity.HasOne(li => li.Template)
-                    .WithMany()
-                    .HasForeignKey(li => li.TemplateId)
-                    .OnDelete(DeleteBehavior.Cascade);
-            });
-
-            // Configure LearningPathItem
-            builder.Entity<LearningPathItem>(entity =>
-            {
-                entity.ToTable("learningpathitems");
-                entity.HasKey(lpi => new { lpi.LearningPathId, lpi.LearningItemId });
-
-                entity.HasOne(lpi => lpi.LearningPath)
-                    .WithMany(lp => lp.LearningPathItems)
-                    .HasForeignKey(lpi => lpi.LearningPathId)
-                    .OnDelete(DeleteBehavior.Cascade);
-
-                entity.HasOne(lpi => lpi.LearningItem)
-                    .WithMany()
-                    .HasForeignKey(lpi => lpi.LearningItemId)
-                    .OnDelete(DeleteBehavior.Cascade);
-            });
-
-            
+            // Other configurations (e.g., Identity, Courses, etc.) remain unchanged
         }
     }
 }

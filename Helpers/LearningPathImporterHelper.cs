@@ -63,98 +63,141 @@ namespace SnapSaves.Helpers
                 // Create Units
                 await _learningPathHelper.AddUnitsAsync(learningPath.Id, manifest.Units);
 
-                // Create Templates and LearningItems
+                // Process Templates and Lessons
                 foreach (var templateEntry in manifest.Templates)
                 {
-                    var templateDir = Path.Combine(learningPathDir, $"Template{templateEntry.Name}");
-                    if (!Directory.Exists(templateDir))
-                    {
-                        Console.WriteLine($"Template directory '{templateDir}' not found. Skipping...");
-                        continue;
-                    }
-
-                    // Check for "files" and "instructions" subdirectories
-                    var filesDir = Path.Combine(templateDir, "files");
-                    var instructionsDir = Path.Combine(templateDir, "instructions");
-
-                    if (!Directory.Exists(filesDir))
-                    {
-                        Console.WriteLine($"Files directory '{filesDir}' not found. Skipping...");
-                        continue;
-                    }
-
-                    // Create a project from the "files" directory
-                    var project = await _projectHelper.CreateProjectFromDirectoryAsync(filesDir, userId: null);
-
-                    Template template;
-                    string? instructionsId = null;
-
-                    if (Directory.Exists(instructionsDir))
-                    {
-                        Console.WriteLine($"Instructions directory found: {instructionsDir}");
-
-                        try
-                        {
-                            // Save the instructions to wwwroot/instructions/{guid}/
-                            var instructionsFolder = Path.Combine("wwwroot", "instructions", Guid.NewGuid().ToString());
-                            Directory.CreateDirectory(instructionsFolder);
-
-                            // Copy all files and subdirectories recursively
-                            CopyDirectoryRecursively(instructionsDir, instructionsFolder);
-
-                            // Save the relative path to content/index.html as the Location in Instructions
-                            var instructions = new Instructions
-                            {
-                                Id = Guid.NewGuid().ToString(),
-                                Type = InstructionsType.Static,
-                                Location = Path.Combine("instructions", Path.GetFileName(instructionsFolder), "index.html"),
-                                Description = $"Instructions for {templateEntry.Name}",
-                                CreatedAt = DateTime.UtcNow
-                            };
-                            _context.Instructions.Add(instructions);
-                            await _context.SaveChangesAsync();
-                            instructionsId = instructions.Id;
-
-                            // Log the instructions creation
-                            Console.WriteLine($"Instructions created with ID: {instructions.Id}");
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"Error processing instructions for template '{templateEntry.Name}': {ex.Message}");
-                            continue;
-                        }
-                    }
-
-                    // Create the template and link the instructions if present
-                    template = await _templateHelper.CreateUniversalTemplateAsync(
-                        project,
-                        description: $"Template for {templateEntry.Name}"
-                    );
-
-                    if (!string.IsNullOrEmpty(instructionsId))
-                    {
-                        template.InstructionsId = instructionsId;
-                        _context.Templates.Update(template);
-                        await _context.SaveChangesAsync();
-                    }
-
-                    // Log the template creation
-                    Console.WriteLine($"Template created. Template ID: {template.Id}, Instructions ID: {instructionsId}");
-
-                    // Create the LearningItem
-                    var learningItem = new LearningItemRequest
-                    {
-                        Name = templateEntry.Name, // Use the name from the manifest
-                        ItemType = LearningItemType.Template,
-                        TemplateId = template.Id,
-                        Position = templateEntry.Position
-                    };
-
-                    await _learningPathHelper.AddLearningItemsAsync(learningPath.Id, new List<LearningItemRequest> { learningItem });
-
-                    // Log the learning item creation
-                    Console.WriteLine($"Learning item created for template '{templateEntry.Name}' with position {templateEntry.Position}");
+                    await ProcessTemplateAsync(learningPathDir, templateEntry, learningPath.Id);
                 }
+
+                foreach (var lessonEntry in manifest.Lessons)
+                {
+                    await ProcessLessonAsync(learningPathDir, lessonEntry, learningPath.Id);
+                }
+            }
+        }
+
+        private async Task ProcessTemplateAsync(string learningPathDir, TemplateEntry templateEntry, int learningPathId)
+        {
+            var templateDir = Path.Combine(learningPathDir, $"Template{templateEntry.Name}");
+            if (!Directory.Exists(templateDir))
+            {
+                Console.WriteLine($"Template directory '{templateDir}' not found. Skipping...");
+                return;
+            }
+
+            // Check for "files" and "instructions" subdirectories
+            var filesDir = Path.Combine(templateDir, "files");
+            var instructionsDir = Path.Combine(templateDir, "instructions");
+
+            if (!Directory.Exists(filesDir))
+            {
+                Console.WriteLine($"Files directory '{filesDir}' not found. Skipping...");
+                return;
+            }
+
+            // Create a project from the "files" directory
+            var project = await _projectHelper.CreateProjectFromDirectoryAsync(filesDir, userId: null);
+
+            Template template;
+            string? instructionsId = null;
+
+            if (Directory.Exists(instructionsDir))
+            {
+                instructionsId = await SaveInstructionsAsync(instructionsDir, templateEntry.Name);
+            }
+
+            // Create the template and link the instructions if present
+            template = await _templateHelper.CreateUniversalTemplateAsync(
+                project,
+                description: $"Template for {templateEntry.Name}"
+            );
+
+            if (!string.IsNullOrEmpty(instructionsId))
+            {
+                template.InstructionsId = instructionsId;
+                _context.Templates.Update(template);
+                await _context.SaveChangesAsync();
+            }
+
+            // Create the LearningItem
+            var learningItem = new LearningItemRequest
+            {
+                Name = templateEntry.Name,
+                ItemType = LearningItemType.Template,
+                TemplateId = template.Id,
+                Position = templateEntry.Position
+            };
+
+            await _learningPathHelper.AddLearningItemsAsync(learningPathId, new List<LearningItemRequest> { learningItem });
+        }
+
+        private async Task ProcessLessonAsync(string learningPathDir, LessonEntry lessonEntry, int learningPathId)
+        {
+            var lessonDir = Path.Combine(learningPathDir, $"Lesson{lessonEntry.Name}");
+            if (!Directory.Exists(lessonDir))
+            {
+                Console.WriteLine($"Lesson directory '{lessonDir}' not found. Skipping...");
+                return;
+            }
+
+            // Save the lesson directory to wwwroot/lessons/{guid}/
+            var lessonFolder = Path.Combine("wwwroot", "lessons", Guid.NewGuid().ToString());
+            Directory.CreateDirectory(lessonFolder);
+
+            // Copy all files and subdirectories recursively
+            CopyDirectoryRecursively(lessonDir, lessonFolder);
+
+            // Save the relative path to content/index.html as the Location in Lesson
+            var lesson = new Lesson
+            {
+                Location = Path.Combine("lessons", Path.GetFileName(lessonFolder), "index.html"),
+                Description = $"Lesson for {lessonEntry.Name}"
+            };
+
+            _context.Lessons.Add(lesson);
+            await _context.SaveChangesAsync();
+
+            // Create the LearningItem
+            var learningItem = new LearningItemRequest
+            {
+                Name = lessonEntry.Name,
+                ItemType = LearningItemType.Lesson,
+                LessonId = lesson.Id,
+                Position = lessonEntry.Position
+            };
+
+            await _learningPathHelper.AddLearningItemsAsync(learningPathId, new List<LearningItemRequest> { learningItem });
+        }
+
+        private async Task<string> SaveInstructionsAsync(string instructionsDir, string templateName)
+        {
+            try
+            {
+                var instructionsFolder = Path.Combine("wwwroot", "instructions", Guid.NewGuid().ToString());
+                Directory.CreateDirectory(instructionsFolder);
+
+                // Copy all files and subdirectories recursively
+                CopyDirectoryRecursively(instructionsDir, instructionsFolder);
+
+                // Save the relative path to content/index.html as the Location in Instructions
+                var instructions = new Instructions
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Type = InstructionsType.Static,
+                    Location = Path.Combine("instructions", Path.GetFileName(instructionsFolder), "index.html"),
+                    Description = $"Instructions for {templateName}",
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Instructions.Add(instructions);
+                await _context.SaveChangesAsync();
+
+                return instructions.Id;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error processing instructions: {ex.Message}");
+                throw;
             }
         }
 
@@ -167,12 +210,10 @@ namespace SnapSaves.Helpers
             {
                 if (line.StartsWith("Description:"))
                 {
-                    // Parse Description
                     manifest.Description = line.Substring(12).Trim();
                 }
                 else if (line.StartsWith("Unit:"))
                 {
-                    // Parse Unit
                     var parts = line.Substring(5).Split(';');
                     var unitName = parts[0].Trim();
                     var rangeParts = parts[1].Split('-');
@@ -188,7 +229,6 @@ namespace SnapSaves.Helpers
                 }
                 else if (line.StartsWith("Template:"))
                 {
-                    // Parse Template
                     var parts = line.Substring(9).Split(';');
                     var templateName = parts[0].Trim();
                     var position = int.Parse(parts[1].Trim());
@@ -196,6 +236,18 @@ namespace SnapSaves.Helpers
                     manifest.Templates.Add(new TemplateEntry
                     {
                         Name = templateName,
+                        Position = position
+                    });
+                }
+                else if (line.StartsWith("Lesson:"))
+                {
+                    var parts = line.Substring(7).Split(';');
+                    var lessonName = parts[0].Trim();
+                    var position = int.Parse(parts[1].Trim());
+
+                    manifest.Lessons.Add(new LessonEntry
+                    {
+                        Name = lessonName,
                         Position = position
                     });
                 }
@@ -231,10 +283,17 @@ namespace SnapSaves.Helpers
     {
         public List<UnitRequest> Units { get; set; } = new List<UnitRequest>();
         public List<TemplateEntry> Templates { get; set; } = new List<TemplateEntry>();
+        public List<LessonEntry> Lessons { get; set; } = new List<LessonEntry>();
         public string Description { get; set; } = string.Empty;
     }
 
     public class TemplateEntry
+    {
+        public string Name { get; set; } = string.Empty;
+        public int Position { get; set; }
+    }
+
+    public class LessonEntry
     {
         public string Name { get; set; } = string.Empty;
         public int Position { get; set; }

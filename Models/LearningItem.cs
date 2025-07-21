@@ -10,6 +10,9 @@ namespace SnapSaves.Models
         public int? TemplateId { get; set; }
         [NotMapped]
         public Template? Template { get; set; }
+        public int? LessonId { get; set; }
+        [NotMapped]
+        public Lesson? Lesson { get; set; }
         public int Position { get; set; } // Position in the LearningPath
 
         [NotMapped]
@@ -19,7 +22,6 @@ namespace SnapSaves.Models
     public enum LearningItemType
     {
         Template,
-        Lesson,
-        Quiz
+        Lesson
     }
 }
